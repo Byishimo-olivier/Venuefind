@@ -1,5 +1,16 @@
 # React + TypeScript + Vite
 
+## API configuration
+
+Create `.env` when you want to point the UI at a specific backend or enable real Google sign-in:
+
+```bash
+VITE_API_BASE_URL=http://localhost:4000
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id
+```
+
+Without `VITE_GOOGLE_CLIENT_ID`, the Google button uses a development fallback account through the backend.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

@@ -1,46 +1,42 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import type { Venue } from '../../data/venues';
+import { getAllVenues } from '../../data/venues';
+import { listVenues } from '../../services/venues';
 import { VenueHeader } from './VenueHome';
 import './venues.css';
 
-const venues = [
-  {
-    name: 'The Umushumba Pavilion',
-    location: 'Kimironko, Kigali',
-    price: '$1,200',
-    label: 'Indoor Performance Space',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1300&q=85',
-    tags: ['High-speed WiFi', 'Photography', 'Catering gifts'],
-    rating: '4.9',
-  },
-  {
-    name: 'Mille Collines Gardens',
-    location: 'Kiyovu, Kigali',
-    price: '$2,500',
-    label: 'Garden Venue',
-    image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1300&q=85',
-    tags: ['Historic site', 'Poolside space', '500 guests'],
-    rating: '5.0',
-  },
-  {
-    name: 'Norrsken Kigali House',
-    location: 'Nyarugenge, Kigali',
-    price: '$850',
-    label: 'Corporate Hub',
-    image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1300&q=85',
-    tags: ['Smart audio', 'Conference access'],
-    rating: '4.8',
-  },
-];
-
 export default function VenueSearchMap() {
+  const [venues, setVenues] = useState<Venue[]>(() => getAllVenues());
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    listVenues()
+      .then((items) => {
+        if (isMounted) setVenues(items.length ? items : getAllVenues());
+      })
+      .catch(() => {
+        if (isMounted) setVenues(getAllVenues());
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <main className="map-page">
       <VenueHeader />
       <div className="map-layout">
         <aside className="filters-panel">
           <h1>Filters</h1>
-          <FilterGroup title="Venue Type" items={['Indoor Performance Space', 'Garden Venues', 'Corporate Boardrooms', 'Art Galleries']} checked={[1]} />
-          <FilterGroup title="Neighborhood" items={['Kimironko', 'Kiyovu', 'Nyarugenge', 'Gacuriro']} checked={[0, 1]} />
+          <FilterGroup title="Venue Type" items={['Indoor/Outdoor', 'Garden Venue', 'Conference Hall', 'Corporate Hub']} checked={[0, 1]} />
+          <FilterGroup title="Province" items={['Kigali City', 'Eastern Province', 'Northern Province', 'Western Province']} checked={[0, 1]} />
           <label className="select-filter">
             <span>Capacity</span>
             <select defaultValue="50 - 200 Guests">
@@ -55,24 +51,28 @@ export default function VenueSearchMap() {
         <section className="results-panel">
           <div className="results-heading">
             <div>
-              <p>Kigali, Rwanda</p>
-              <h2>12 Smart Venues Found</h2>
+              <p>Rwanda</p>
+              <h2>{isLoading ? 'Loading Smart Venues...' : `${venues.length} Smart Venues Found`}</h2>
             </div>
             <button>Recommended</button>
           </div>
 
           <div className="venue-results">
             {venues.map((venue) => (
-              <Link className="result-card" to="/venues/akagera" key={venue.name}>
+              <Link className="result-card" to={`/venues/${venue.id}`} key={venue.id}>
                 <div className="result-image">
-                  <img src={venue.image} alt="" />
+                  {venue.heroMediaType === 'video' ? (
+                    <video src={venue.heroImage} muted autoPlay loop playsInline />
+                  ) : (
+                    <img src={venue.heroImage} alt="" />
+                  )}
                   <span>{venue.label}</span>
-                  <button aria-label={`Save ${venue.name}`}>♡</button>
+                  <button aria-label={`Save ${venue.name}`}>Save</button>
                 </div>
                 <div className="result-info">
                   <div>
                     <h3>{venue.name}</h3>
-                    <p>⌖ {venue.location}</p>
+                    <p>{venue.location}</p>
                     <div className="tag-row">
                       {venue.tags.map((tag) => (
                         <span key={tag}>{tag}</span>
@@ -82,7 +82,7 @@ export default function VenueSearchMap() {
                   <div className="price-block">
                     <strong>{venue.price}</strong>
                     <span>/ day</span>
-                    <small>★ {venue.rating} (28 reviews)</small>
+                    <small>{venue.rating === 'New' ? 'New listing' : `${venue.rating} (${venue.reviews} reviews)`}</small>
                   </div>
                 </div>
               </Link>
@@ -92,21 +92,21 @@ export default function VenueSearchMap() {
 
         <aside className="map-panel">
           <div className="map-search">
-            <span>⌕</span>
+            <span>Search</span>
             <input defaultValue="Smart Event Venue" aria-label="Search map" />
           </div>
           <div className="active-search">Active Search Area<br />Kigali City Center & Surrounding Hills</div>
           <div className="abstract-map">
-            <span className="pin pin-one">$1,200</span>
-            <span className="pin pin-two">$2,500</span>
-            <span className="pin pin-three">$850</span>
+            {venues.slice(0, 3).map((venue, index) => (
+              <span className={`pin pin-${['one', 'two', 'three'][index]}`} key={venue.id}>{venue.price.replace('RWF ', '')}</span>
+            ))}
             <strong>KIGALI</strong>
             <em>Rwanda Urban Grid</em>
           </div>
           <div className="map-controls">
             <button>+</button>
             <button>-</button>
-            <button>◎</button>
+            <button>Center</button>
           </div>
         </aside>
       </div>

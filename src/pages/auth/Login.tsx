@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { validateEmail } from '../../utils/validation';
+import { continueWithGoogle, login } from '../../services/auth';
 import { AuthShell, BrandMark, EyeButton, GoogleIcon } from './AuthShell';
 
 const loginImage =
@@ -10,8 +11,10 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [serverMessage, setServerMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -27,12 +30,32 @@ export default function Login() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setServerMessage('');
     if (validate()) {
       setIsSubmitting(true);
-      console.log({ email, password });
-      setTimeout(() => setIsSubmitting(false), 1000);
+      try {
+        await login({ email, password });
+        navigate('/venues');
+      } catch (error) {
+        setServerMessage(error instanceof Error ? error.message : 'Unable to log in.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleGoogle = async () => {
+    setServerMessage('');
+    setIsSubmitting(true);
+    try {
+      await continueWithGoogle('login');
+      navigate('/venues');
+    } catch (error) {
+      setServerMessage(error instanceof Error ? error.message : 'Google sign-in failed.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -94,17 +117,18 @@ export default function Login() {
         </div>
 
         <button type="submit" disabled={isSubmitting} className="primary-button">
-          Log In
+          {isSubmitting ? 'Logging In...' : 'Log In'}
         </button>
+        {serverMessage && <p className="field-error centered">{serverMessage}</p>}
       </form>
 
       <div className="divider">
         <span>Or continue with</span>
       </div>
 
-      <button className="secondary-button">
+      <button className="secondary-button" onClick={handleGoogle} disabled={isSubmitting}>
         <GoogleIcon />
-        <span>Sign up with Google</span>
+        <span>Continue with Google</span>
       </button>
 
       <p className="auth-switch">

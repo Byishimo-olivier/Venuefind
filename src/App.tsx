@@ -32,41 +32,49 @@ import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminPerformance from './pages/admin/AdminPerformance';
 import AdminDemand from './pages/admin/AdminDemand';
 import AdminReports from './pages/admin/AdminReports';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/venue" element={<Navigate to="/venues" replace />} />
         <Route path="/venues" element={<VenueHome />} />
         <Route path="/venues/search" element={<VenueSearchMap />} />
         <Route path="/venues/akagera" element={<VenueDetails />} />
+        <Route path="/venues/:venueId" element={<VenueDetails />} />
         <Route path="/venues/akagera/book" element={<VenueBooking />} />
+        <Route path="/venues/:venueId/book" element={<VenueBooking />} />
         <Route path="/venues/akagera/checkout" element={<VenueCheckout />} />
+        <Route path="/venues/:venueId/checkout" element={<VenueCheckout />} />
         <Route path="/venues/akagera/confirmed" element={<BookingConfirmation />} />
+        <Route path="/venues/:venueId/confirmed" element={<BookingConfirmation />} />
         <Route path="/venues/akagera/reviews" element={<VenueReviews />} />
+        <Route path="/venues/:venueId/reviews" element={<VenueReviews />} />
         <Route path="/venues/akagera/review/new" element={<VenueReviewForm />} />
-        <Route path="/owner" element={<OwnerDashboard />} />
-        <Route path="/owner/transactions" element={<OwnerTransactions />} />
-        <Route path="/owner/invoices" element={<OwnerTransactions />} />
-        <Route path="/owner/payouts" element={<OwnerPayouts />} />
-        <Route path="/owner/register" element={<RegistrationBasic />} />
-        <Route path="/owner/register/business" element={<RegistrationBusiness />} />
-        <Route path="/owner/register/verification" element={<RegistrationVerification />} />
-        <Route path="/owner/register/review" element={<RegistrationReview />} />
-        <Route path="/owner/reputation" element={<OwnerReputation />} />
-        <Route path="/owner/portfolio" element={<OwnerPortfolio />} />
-        <Route path="/owner/bookings" element={<OwnerBookings />} />
-        <Route path="/owner/analytics" element={<OwnerAnalytics />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/finance" element={<AdminFinance />} />
-        <Route path="/admin/providers" element={<AdminProviders />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/settings" element={<AdminSettings />} />
-        <Route path="/admin/analytics" element={<AdminAnalytics />} />
-        <Route path="/admin/performance" element={<AdminPerformance />} />
-        <Route path="/admin/demand" element={<AdminDemand />} />
-        <Route path="/admin/reports" element={<AdminReports />} />
+        <Route path="/venues/:venueId/review/new" element={<VenueReviewForm />} />
+        <Route path="/owner" element={<ProtectedRoute allowedRoles={['owner']}><OwnerDashboard /></ProtectedRoute>} />
+        <Route path="/owner/transactions" element={<ProtectedRoute allowedRoles={['owner']}><OwnerTransactions /></ProtectedRoute>} />
+        <Route path="/owner/invoices" element={<ProtectedRoute allowedRoles={['owner']}><OwnerTransactions /></ProtectedRoute>} />
+        <Route path="/owner/payouts" element={<ProtectedRoute allowedRoles={['owner']}><OwnerPayouts /></ProtectedRoute>} />
+        <Route path="/owner/register" element={<ProtectedRoute allowedRoles={['owner']}><RegistrationBasic /></ProtectedRoute>} />
+        <Route path="/owner/register/business" element={<ProtectedRoute allowedRoles={['owner']}><RegistrationBusiness /></ProtectedRoute>} />
+        <Route path="/owner/register/verification" element={<ProtectedRoute allowedRoles={['owner']}><RegistrationVerification /></ProtectedRoute>} />
+        <Route path="/owner/register/review" element={<ProtectedRoute allowedRoles={['owner']}><RegistrationReview /></ProtectedRoute>} />
+        <Route path="/owner/reputation" element={<ProtectedRoute allowedRoles={['owner']}><OwnerReputation /></ProtectedRoute>} />
+        <Route path="/owner/portfolio" element={<ProtectedRoute allowedRoles={['owner']}><OwnerPortfolio /></ProtectedRoute>} />
+        <Route path="/owner/bookings" element={<ProtectedRoute allowedRoles={['owner']}><OwnerBookings /></ProtectedRoute>} />
+        <Route path="/owner/analytics" element={<ProtectedRoute allowedRoles={['owner']}><OwnerAnalytics /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/finance" element={<ProtectedRoute allowedRoles={['admin']}><AdminFinance /></ProtectedRoute>} />
+        <Route path="/admin/providers" element={<ProtectedRoute allowedRoles={['admin']}><AdminProviders /></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
+        <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
+        <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AdminAnalytics /></ProtectedRoute>} />
+        <Route path="/admin/performance" element={<ProtectedRoute allowedRoles={['admin']}><AdminPerformance /></ProtectedRoute>} />
+        <Route path="/admin/demand" element={<ProtectedRoute allowedRoles={['admin']}><AdminDemand /></ProtectedRoute>} />
+        <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/verification" element={<Verification />} />

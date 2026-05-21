@@ -1,15 +1,24 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { resendVerificationCode, verifyAccount } from '../../services/auth';
+import { getAuthUser } from '../../services/api';
 import { AuthShell } from './AuthShell';
 
 const verificationImage =
   'https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=1200&q=85';
+const inboxNotice = 'If you do not see it in your inbox, check your Spam or Junk folder.';
 
 export default function Verification() {
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
-  const [verificationMethod, setVerificationMethod] = useState<'authenticator' | 'sms'>('authenticator');
+  const user = getAuthUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [errors, setErrors] = useState<string>('');
+  const [notice, setNotice] = useState(
+    user?.email
+      ? `Check ${user.email} for the verification code. ${inboxNotice}`
+      : `Check your email for the verification code. ${inboxNotice}`
+  );
   const navigate = useNavigate();
 
   const handleCodeChange = (index: number, value: string) => {
@@ -26,7 +35,7 @@ export default function Verification() {
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const code = verificationCode.join('');
     if (code.length !== verificationCode.length) {
@@ -35,11 +44,27 @@ export default function Verification() {
     }
 
     setIsSubmitting(true);
-    console.log({ verificationCode: code, method: verificationMethod });
-    setTimeout(() => {
+    try {
+      await verifyAccount(code, 'authenticator');
       setIsSubmitting(false);
-      navigate('/dashboard');
-    }, 1000);
+      navigate('/venues');
+    } catch (error) {
+      setErrors(error instanceof Error ? error.message : 'Unable to verify your account.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setErrors('');
+    setIsResending(true);
+    try {
+      const result = await resendVerificationCode();
+      setNotice(result.emailSent && user?.email ? `A new code was sent to ${user.email}. ${inboxNotice}` : result.message || `A new code was generated. ${inboxNotice}`);
+    } catch (error) {
+      setErrors(error instanceof Error ? error.message : 'Unable to resend verification code.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -71,50 +96,29 @@ export default function Verification() {
     >
       <div className="auth-heading">
         <h2>Umutekano</h2>
-        <p>Step 2 of 2: Secure your account to ensure the safety of your venue bookings and financial transactions.</p>
+        <p>{notice}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="auth-form">
         <div className="verification-section">
           <div className="step-title">
             <span>1</span>
-            <h3>Select Verification Method</h3>
+            <h3>Email Verification</h3>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setVerificationMethod('authenticator')}
-            className={`method-card ${verificationMethod === 'authenticator' ? 'active' : ''}`}
-          >
+          <div className="method-card active">
             <span className="method-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24">
-                <path d="M8 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-                <path d="M10 8h4v4h-4z" />
+                <path d="M4 6h16v12H4z" />
+                <path d="m4 7 8 6 8-6" />
               </svg>
             </span>
             <span>
-              <small>Recommended</small>
-              <strong>Authenticator App</strong>
-              <em>Use Google Authenticator or Microsoft Authenticator for the highest level of security.</em>
+              <small>Verification email</small>
+              <strong>{user?.email || 'Your signup email'}</strong>
+              <em>Enter the 6-digit code sent to the email address used during signup. Check Spam or Junk if it is missing.</em>
             </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setVerificationMethod('sms')}
-            className={`method-card ${verificationMethod === 'sms' ? 'active' : ''}`}
-          >
-            <span className="method-icon muted" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M4 5h16v11H7l-3 3V5z" />
-                <path d="M8 9h8M8 12h5" />
-              </svg>
-            </span>
-            <span>
-              <strong>SMS Verification</strong>
-              <em>Receive a one-time code to your registered Rwandan mobile number (+250).</em>
-            </span>
-          </button>
+          </div>
         </div>
 
         <div className="verification-section">
@@ -141,13 +145,15 @@ export default function Verification() {
             {errors && <p className="field-error centered">{errors}</p>}
             <p>
               Haven't received the code?
-              <button type="button">Resend via Authenticator</button>
+              <button type="button" onClick={handleResend} disabled={isResending}>
+                {isResending ? 'Sending...' : 'Resend email'}
+              </button>
             </p>
           </div>
         </div>
 
         <button type="submit" disabled={isSubmitting} className="primary-button">
-          Continue to Dashboard
+          {isSubmitting ? 'Verifying...' : 'Continue to Dashboard'}
           <span aria-hidden="true">-&gt;</span>
         </button>
       </form>

@@ -1,4 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import type { Venue } from '../../data/venues';
+import { getAllVenues } from '../../data/venues';
+import { getAuthUser, clearAuthSession } from '../../services/api';
+import { listVenues } from '../../services/venues';
 import './venues.css';
 
 const heroImage =
@@ -63,6 +68,39 @@ const recent = [
 ];
 
 export default function VenueHome() {
+  const [location, setLocation] = useState('Kigali, Rwanda');
+  const [checkInDate, setCheckInDate] = useState('');
+  const [checkOutDate, setCheckOutDate] = useState('');
+  const [venues, setVenues] = useState<Venue[]>(() => getAllVenues());
+  const [isLoadingVenues, setIsLoadingVenues] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    listVenues()
+      .then((items) => {
+        if (isMounted) setVenues(items.length ? items : getAllVenues());
+      })
+      .catch(() => {
+        if (isMounted) setVenues(getAllVenues());
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingVenues(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const recentVenues = venues.slice(0, 3);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate(`/venues/search?location=${encodeURIComponent(location)}`);
+  };
+
   return (
     <main className="venues-page">
       <VenueHeader />
@@ -74,16 +112,50 @@ export default function VenueHome() {
           <p>
             Experience the precision of AI-driven recommendations tailored to your legacy events.
           </p>
-          <form className="venue-search">
-            <label>
-              <span aria-hidden="true">⌖</span>
-              Kigali, Rwanda
-            </label>
-            <label>
-              <span aria-hidden="true">□</span>
-              Select dates
-            </label>
-            <Link to="/venues/search">Search</Link>
+          <form className="venue-search" onSubmit={handleSearch}>
+            <div className="search-field">
+              <label htmlFor="location">Location</label>
+              <div className="search-input-wrapper">
+                <span className="search-icon">📍</span>
+                <input
+                  id="location"
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Enter city or venue name"
+                />
+              </div>
+            </div>
+
+            <div className="search-field">
+              <label htmlFor="checkIn">Check In</label>
+              <div className="search-input-wrapper">
+                <span className="search-icon">📅</span>
+                <input
+                  id="checkIn"
+                  type="date"
+                  value={checkInDate}
+                  onChange={(e) => setCheckInDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="search-field">
+              <label htmlFor="checkOut">Check Out</label>
+              <div className="search-input-wrapper">
+                <span className="search-icon">📅</span>
+                <input
+                  id="checkOut"
+                  type="date"
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="search-button">
+              Search Venues
+            </button>
           </form>
         </div>
 
@@ -94,6 +166,34 @@ export default function VenueHome() {
             <strong>Kigali Convention Centre</strong>
             <p>Ideal for high-level international summits with up to 5,000 delegates.</p>
           </div>
+        </div>
+      </section>
+
+      <section className="recent-section">
+        <div className="section-title-row">
+          <div>
+            <h2>Saved Venue Listings</h2>
+            <p>{isLoadingVenues ? 'Loading venues saved by owners.' : 'Live listings from the database.'}</p>
+          </div>
+          <Link to="/venues/search">Browse all saved venues</Link>
+        </div>
+        <div className="recent-grid">
+          {recentVenues.map((venue) => (
+            <Link to={`/venues/${venue.id}`} key={venue.id}>
+              <button aria-label={`Save ${venue.name}`}>♡</button>
+              {venue.heroMediaType === 'video' ? (
+                <video src={venue.heroImage} muted autoPlay loop playsInline />
+              ) : (
+                <img src={venue.heroImage} alt="" />
+              )}
+              <p className="location">{venue.location}</p>
+              <h3>{venue.name}</h3>
+              <div>
+                <span>{venue.tags?.slice(0, 2).join(' · ') || venue.category}</span>
+                <strong>{venue.price}</strong>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -183,7 +283,35 @@ export default function VenueHome() {
   );
 }
 
+function getInitials(fullName: string): string {
+  return fullName
+    .split(' ')
+    .map(name => name[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 export function VenueHeader() {
+  const [showProfile, setShowProfile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+  const user = getAuthUser();
+
+  const handleLogout = () => {
+    clearAuthSession();
+    setShowProfile(false);
+    navigate('/login');
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/venues/search?location=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
+    }
+  };
+
   return (
     <header className="venue-header">
       <Link to="/venues" className="venue-logo">
@@ -196,8 +324,117 @@ export function VenueHeader() {
         <Link to="/venues/akagera">Heritage</Link>
       </nav>
       <div className="header-actions">
-        <Link to="/venues/search" aria-label="Search venues">⌕</Link>
-        <Link to="/login" aria-label="Account">◎</Link>
+        <form className="header-search" onSubmit={handleSearchSubmit}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search venues..."
+            aria-label="Search venues"
+          />
+          <button type="submit" aria-label="Search">
+            🔍
+          </button>
+        </form>
+        {user ? (
+          <div className="profile-menu" style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setShowProfile(!showProfile)} 
+              aria-label="User profile"
+              style={{
+                background: '#1a1a1a',
+                border: 'none',
+                cursor: 'pointer',
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {getInitials(user.fullName)}
+            </button>
+            {showProfile && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                backgroundColor: 'white',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                minWidth: '200px',
+                zIndex: 1000,
+                marginTop: '8px'
+              }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #eee' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.9rem', color: '#666' }}>Logged in as</p>
+                  <p style={{ margin: '0', fontWeight: '600', fontSize: '0.95rem' }}>{user.fullName}</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#999' }}>{user.email}</p>
+                </div>
+                {user.role !== 'customer' && (
+                  <>
+                    <Link 
+                      to="/owner" 
+                      onClick={() => setShowProfile(false)}
+                      style={{ display: 'block', padding: '10px 16px', color: '#333', textDecoration: 'none', fontSize: '0.9rem' }}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link 
+                      to="/owner/portfolio" 
+                      onClick={() => setShowProfile(false)}
+                      style={{ display: 'block', padding: '10px 16px', color: '#333', textDecoration: 'none', fontSize: '0.9rem', borderTop: '1px solid #eee' }}
+                    >
+                      My Portfolio
+                    </Link>
+                  </>
+                )}
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    backgroundColor: '#fff',
+                    border: 'none',
+                    borderTop: user.role !== 'customer' ? '1px solid #eee' : '1px solid #eee',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    color: '#d32f2f',
+                    textAlign: 'left',
+                    fontWeight: '500'
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link 
+            to="/login" 
+            aria-label="Account"
+            style={{
+              background: '#f5f5f5',
+              border: 'none',
+              cursor: 'pointer',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              fontSize: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textDecoration: 'none'
+            }}
+          >
+            👤
+          </Link>
+        )}
       </div>
     </header>
   );

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { validateEmail, validatePassword, validateFullName, validatePhoneNumber } from '../../utils/validation';
+import { continueWithGoogle, register } from '../../services/auth';
 import { AuthShell, GoogleIcon } from './AuthShell';
 
 const signupImage =
@@ -12,8 +13,11 @@ export default function SignUp() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('customer');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [serverMessage, setServerMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -39,12 +43,32 @@ export default function SignUp() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setServerMessage('');
     if (validate()) {
       setIsSubmitting(true);
-      console.log({ fullName, email, phone, password });
-      setTimeout(() => setIsSubmitting(false), 1000);
+      try {
+        await register({ fullName, email, phone: `+250${phone.replace(/\D/g, '')}`, password, role });
+        navigate('/verification');
+      } catch (error) {
+        setServerMessage(error instanceof Error ? error.message : 'Unable to create your account.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleGoogle = async () => {
+    setServerMessage('');
+    setIsSubmitting(true);
+    try {
+      await continueWithGoogle('signup');
+      navigate('/verification');
+    } catch (error) {
+      setServerMessage(error instanceof Error ? error.message : 'Google sign-up failed.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -141,16 +165,30 @@ export default function SignUp() {
           </div>
         </div>
 
+        <div className="field">
+          <label htmlFor="role">I am a...</label>
+          <select
+            id="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="role-select"
+          >
+            <option value="customer">Customer (Looking to book venues)</option>
+            <option value="owner">Owner/Venue Provider (Looking to list venues)</option>
+          </select>
+        </div>
+
         <button type="submit" disabled={isSubmitting} className="primary-button">
-          Create Account
+          {isSubmitting ? 'Creating Account...' : 'Create Account'}
         </button>
+        {serverMessage && <p className="field-error centered">{serverMessage}</p>}
       </form>
 
       <div className="divider">
         <span>Or join with</span>
       </div>
 
-      <button className="secondary-button">
+      <button className="secondary-button" onClick={handleGoogle} disabled={isSubmitting}>
         <GoogleIcon />
         <span>Sign up with Google</span>
       </button>

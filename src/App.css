@@ -665,6 +665,31 @@ input.is-invalid {
   padding: 30px;
 }
 
+.dev-code-panel {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(16, 32, 51, 0.12);
+  border-radius: 6px;
+  background: #fff;
+  color: #102033;
+  padding: 14px;
+  text-align: center;
+}
+
+.dev-code-panel span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dev-code-panel strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 28px;
+  letter-spacing: 0.16em;
+}
+
 .code-inputs {
   display: grid;
   grid-template-columns: repeat(6, 1fr);

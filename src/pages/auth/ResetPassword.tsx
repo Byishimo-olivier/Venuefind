@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { validatePassword } from '../../utils/validation';
+import { resetPassword } from '../../services/auth';
 import { AuthShell, EyeButton } from './AuthShell';
 
 const resetImage =
@@ -13,7 +14,9 @@ export default function ResetPassword() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [serverMessage, setServerMessage] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -31,15 +34,25 @@ export default function ResetPassword() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setServerMessage('');
     if (validate()) {
+      const token = searchParams.get('token') || '';
+      if (!token) {
+        setServerMessage('Reset token is missing. Please request a new reset link.');
+        return;
+      }
+
       setIsSubmitting(true);
-      console.log({ password });
-      setTimeout(() => {
+      try {
+        await resetPassword(token, password);
         setIsSubmitting(false);
         navigate('/login');
-      }, 1000);
+      } catch (error) {
+        setServerMessage(error instanceof Error ? error.message : 'Unable to reset password.');
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -109,9 +122,10 @@ export default function ResetPassword() {
         </div>
 
         <button type="submit" disabled={isSubmitting} className="primary-button">
-          Reset Password
+          {isSubmitting ? 'Resetting Password...' : 'Reset Password'}
           <span aria-hidden="true">-&gt;</span>
         </button>
+        {serverMessage && <p className="field-error centered">{serverMessage}</p>}
       </form>
 
       <p className="auth-switch small">

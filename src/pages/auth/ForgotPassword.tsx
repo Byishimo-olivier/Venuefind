@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { validateEmail } from '../../utils/validation';
+import { forgotPassword } from '../../services/auth';
 import { AuthShell } from './AuthShell';
 
 const forgotImage =
@@ -11,6 +12,7 @@ export default function ForgotPassword() {
   const [errors, setErrors] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [resetToken, setResetToken] = useState('');
 
   const validate = (): boolean => {
     if (!validateEmail(email)) {
@@ -20,16 +22,20 @@ export default function ForgotPassword() {
     return true;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrors('');
     if (validate()) {
       setIsSubmitting(true);
-      console.log({ email });
-      setTimeout(() => {
+      try {
+        const result = await forgotPassword(email);
+        setResetToken(result.resetToken || '');
         setIsSubmitting(false);
         setSubmitted(true);
-      }, 1000);
+      } catch (error) {
+        setErrors(error instanceof Error ? error.message : 'Unable to request a reset link.');
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -92,6 +98,7 @@ export default function ForgotPassword() {
           <p>
             We sent a password reset link to <strong>{email}</strong>.
           </p>
+          {resetToken && <p className="dev-reset-token">Dev reset token: <Link to={`/reset-password?token=${resetToken}`}>open reset page</Link></p>}
           <button
             type="button"
             onClick={() => {
