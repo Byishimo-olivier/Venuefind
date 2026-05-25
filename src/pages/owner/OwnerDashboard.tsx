@@ -1,59 +1,64 @@
 import { Link } from 'react-router-dom';
 import { OwnerShell, MetricCard } from './OwnerShell';
-
-const topVenues = [
-  ['The Crystal Plaza', '$420k', 'Top Performer'],
-  ['Loft 42 Studios', '$385k', '88% Occupancy'],
-  ['Emerald Gardens', '$312k', '+18K MoM'],
-  ['Skyview Executive', '$290k', 'Stable'],
-];
+import { formatRwf, useOwnerData, useOwnerSummary } from './ownerData';
 
 export default function OwnerDashboard() {
+  const { venues, bookings, isLoading, error } = useOwnerData();
+  const summary = useOwnerSummary(venues, bookings);
+
   return (
     <OwnerShell>
       <section className="owner-content">
         <div className="owner-heading">
           <div><p>Financial Intelligence</p><h1>Executive Dashboard</h1></div>
-          <div><button>▣ Last 30 Days</button><button className="gold">↧ Export PDF</button></div>
+          <div><button>Last 30 Days</button><button className="gold">Export PDF</button></div>
         </div>
 
+        {isLoading && <p>Loading owner dashboard...</p>}
+        {error && <p className="field-error centered">{error}</p>}
+
         <div className="owner-metrics-grid">
-          <MetricCard label="Total Revenue" value="Rwf4,829,000" delta="+12.5%" />
-          <MetricCard label="User Acquisition" value="12,482" accent="gold" delta="+8.2%" />
-          <MetricCard label="Booking Conversion" value="64.2%" delta="-2.1%" />
-          <MetricCard label="Average Ticket" value="Rwf18,420" accent="gold" delta="+15.4%" />
+          <MetricCard label="Total Revenue" value={formatRwf(summary.totalRevenue)} delta={`${summary.totalBookings} bookings`} />
+          <MetricCard label="Confirmed Guests" value={String(summary.guestCount)} accent="gold" delta={`${summary.upcomingBookings} upcoming`} />
+          <MetricCard label="Booking Conversion" value={`${summary.conversionRate}%`} delta={`${summary.confirmedBookings} confirmed`} />
+          <MetricCard label="Average Ticket" value={formatRwf(summary.averageTicket)} accent="gold" delta={`${venues.length} venues`} />
         </div>
 
         <div className="forecast-grid">
           <section className="forecast-card">
-            <div className="card-title"><h2>Venue Demand Forecasting</h2><p>Predictive occupancy rates for the next quarter</p></div>
+            <div className="card-title"><h2>Venue Demand Forecasting</h2><p>Booking volume by month from live reservations.</p></div>
             <div className="chart-bars">
-              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => (
-                <div key={month}>
-                  <span style={{ height: `${70 + index * 16}px` }} />
-                  <b style={{ height: `${95 + index * 20}px` }} />
-                  <em>{month}</em>
-                </div>
-              ))}
+              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
+                const monthBookings = bookings.filter((booking) => new Date(`${booking.date}T00:00:00`).getMonth() === index).length;
+                const height = Math.max(35, 55 + monthBookings * 22);
+                return (
+                  <div key={month}>
+                    <span style={{ height: `${Math.max(28, height - 20)}px` }} />
+                    <b style={{ height: `${height}px` }} />
+                    <em>{month}</em>
+                  </div>
+                );
+              })}
             </div>
           </section>
           <aside className="top-venues-card">
             <h2>Top Venues</h2>
-            {topVenues.map(([name, revenue, note]) => (
-              <article key={name}>
-                <img src="https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=120" alt="" />
-                <div><strong>{name}</strong><span>Luxury Events</span></div>
-                <b>{revenue}<small>{note}</small></b>
+            {summary.topVenues.slice(0, 4).map(({ venue, revenue, bookings: bookingCount }) => (
+              <article key={venue.id}>
+                <img src={venue.heroImage || 'https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=120'} alt="" />
+                <div><strong>{venue.name}</strong><span>{venue.category || 'Venue'}</span></div>
+                <b>{formatRwf(revenue)}<small>{bookingCount} bookings</small></b>
               </article>
             ))}
-            <Link to="/owner/portfolio">View All Providers</Link>
+            {!isLoading && summary.topVenues.length === 0 && <p>No venue performance yet.</p>}
+            <Link to="/owner/portfolio">View All Listings</Link>
           </aside>
         </div>
 
         <section className="insight-card">
           <div>
             <h2>Custom Intelligence Builder</h2>
-            <p>Aggregate multi-dimensional data points for bespoke stakeholder reports.</p>
+            <p>Aggregate booking, venue, and revenue data for stakeholder reports.</p>
             <div className="insight-controls">
               <select><option>Revenue by Category</option></select>
               <select><option>Rolling 12 Months</option></select>
@@ -62,10 +67,10 @@ export default function OwnerDashboard() {
             </div>
           </div>
           <aside>
-            <h3>AI Suggested Reports</h3>
-            <p>Seasonal Peak Performance</p>
-            <p>Commission Yield Analysis</p>
-            <p>Luxury Market Growth 2Y</p>
+            <h3>Suggested Reports</h3>
+            <p>{summary.pendingBookings} bookings awaiting deposit</p>
+            <p>{summary.pendingVenues} listings in review</p>
+            <p>{formatRwf(summary.pendingRevenue)} outstanding balance</p>
           </aside>
         </section>
       </section>

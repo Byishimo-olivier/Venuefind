@@ -2,8 +2,9 @@ import { Link, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import type { SyntheticEvent } from 'react';
 import type { Venue } from '../../data/venues';
-import { getAllVenues, getVenueById } from '../../data/venues';
-import { getVenue as getVenueFromApi } from '../../services/venues';
+import { getVenue as getVenueFromApi, listVenues } from '../../services/venues';
+import { listVenueReviews } from '../../services/reviews';
+import type { VenueReview } from '../../services/reviews';
 import { VenueHeader } from './VenueHome';
 import './venues.css';
 
@@ -23,25 +24,17 @@ function getTelHref(phone: string) {
   return normalized ? `tel:${normalized}` : '#';
 }
 
-const reviews = [
-  {
-    name: 'Divine Umutoni',
-    role: 'Senior Planner, Kigali Heights Events',
-    time: '2 months ago',
-    text: 'The light quality at sunset is incomparable for photography. The venue team gave us total peace of mind.',
-  },
-  {
-    name: 'Jean-Paul Nsabimana',
-    role: 'CEO, Heritage Events Rwanda',
-    time: '1 month ago',
-    text: 'Unmatched logistics support. The staff coordinated every guest movement and supplier handoff perfectly.',
-  },
-];
+function formatReviewDate(value: string) {
+  return new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric' }).format(new Date(value));
+}
 
 export default function VenueDetails() {
   const { venueId } = useParams();
-  const [venue, setVenue] = useState<Venue>(() => getVenueById(venueId));
+  const [venue, setVenue] = useState<Venue | null>(null);
+  const [more, setMore] = useState<Venue[]>([]);
+  const [reviews, setReviews] = useState<VenueReview[]>([]);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [status, setStatus] = useState('Loading venue...');
 
   useEffect(() => {
     if (!venueId) return;
@@ -49,16 +42,57 @@ export default function VenueDetails() {
     let isMounted = true;
     getVenueFromApi(venueId)
       .then((apiVenue) => {
-        if (isMounted) setVenue(apiVenue);
+        if (!isMounted) return;
+        setVenue(apiVenue);
+        setStatus('');
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        setVenue(null);
+        setStatus(error instanceof Error ? error.message : 'Venue not found.');
+      });
+
+    listVenues()
+      .then((items) => {
+        if (isMounted) setMore(items.filter((item) => item.id !== venueId).slice(0, 3));
       })
       .catch(() => {
-        if (isMounted) setVenue(getVenueById(venueId));
+        if (isMounted) setMore([]);
       });
 
     return () => {
       isMounted = false;
     };
   }, [venueId]);
+
+  useEffect(() => {
+    if (!venueId) return;
+
+    let isMounted = true;
+    listVenueReviews(venueId)
+      .then((result) => {
+        if (isMounted) setReviews(result.reviews.slice(0, 2));
+      })
+      .catch(() => {
+        if (isMounted) setReviews([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [venueId]);
+
+  if (!venue) {
+    return (
+      <main className="venue-detail-page">
+        <VenueHeader />
+        <section className="detail-wrap">
+          <p className="empty-venues">{status || 'Venue not found.'}</p>
+          <Link to="/venues/search">Browse available venues</Link>
+        </section>
+      </main>
+    );
+  }
 
   const gallery = venue.galleryMedia?.length
     ? venue.galleryMedia
@@ -71,7 +105,6 @@ export default function VenueDetails() {
     ...gallery.filter((item) => item.url !== venue.heroImage),
   ].filter((item) => item.url);
   const selectedMedia = allMedia[selectedMediaIndex] || allMedia[0];
-  const more = getAllVenues().filter((item) => item.id !== venue.id).slice(0, 3);
 
   return (
     <main className="venue-detail-page">
@@ -206,18 +239,31 @@ export default function VenueDetails() {
                 <strong>{venue.rating === 'New' ? 'New listing' : `Star ${venue.rating}`} <span>({venue.reviews} Reviews)</span></strong>
               </div>
               {reviews.map((review) => (
-                <article className="review-card" key={review.name}>
-                  <div className="review-avatar">{review.name.slice(0, 1)}</div>
+                <article className="review-card" key={review.id}>
+                  <div className="review-avatar">{review.reviewerName.slice(0, 1)}</div>
                   <div>
                     <div className="review-meta">
-                      <strong>{review.name}</strong>
-                      <span>{review.time}</span>
+                      <strong>{review.reviewerName}</strong>
+                      <span>{formatReviewDate(review.createdAt)}</span>
                     </div>
-                    <p>"{review.text}"</p>
-                    <small>{review.role}</small>
+                    <p>"{review.body}"</p>
+                    <small>{review.reviewerRole}</small>
                   </div>
                 </article>
               ))}
+              {!reviews.length && (
+                <article className="review-card">
+                  <div className="review-avatar">N</div>
+                  <div>
+                    <div className="review-meta">
+                      <strong>No reviews yet</strong>
+                      <span>New</span>
+                    </div>
+                    <p>"Be the first guest to share your experience at this venue."</p>
+                    <small>Guest feedback</small>
+                  </div>
+                </article>
+              )}
             </section>
           </section>
 
@@ -280,8 +326,8 @@ export default function VenueDetails() {
           <h3>Explore</h3>
           <Link to="/venues/search">Our Portfolio</Link>
           <Link to={`/venues/${venue.id}/book`}>Planning Services</Link>
-          <Link to="/venues/akagera">Cultural Guidance</Link>
-          <Link to="/venues/akagera/reviews">Sustainability</Link>
+          <Link to="/venues/search">Cultural Guidance</Link>
+          <Link to={`/venues/${venue.id}/reviews`}>Sustainability</Link>
         </div>
         <div>
           <h3>Company</h3>

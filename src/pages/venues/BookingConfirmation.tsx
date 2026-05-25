@@ -13,7 +13,7 @@ function formatTimeRange(startTime: string, durationHours: number) {
 }
 
 export default function BookingConfirmation() {
-  const { venueId = 'akagera' } = useParams();
+  const { venueId = '' } = useParams();
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('bookingId') || '';
   const [booking, setBooking] = useState<Booking | null>(null);

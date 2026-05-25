@@ -1,24 +1,88 @@
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import type { Venue } from '../../data/venues';
+import { getVenue as getVenueFromApi } from '../../services/venues';
+import { listVenueReviews } from '../../services/reviews';
+import type { ReviewSummary, VenueReview } from '../../services/reviews';
 import './venues.css';
 
-const ballroomImage =
-  'https://images.pexels.com/photos/169190/pexels-photo-169190.jpeg?auto=compress&cs=tinysrgb&w=900';
+const defaultSummary: ReviewSummary = {
+  average: 'New',
+  count: 0,
+  categories: {
+    cleanliness: 'New',
+    service: 'New',
+    value: 'New',
+    location: 'New',
+  },
+};
+
+function renderStars(value: string | number) {
+  const rating = Math.round(Number(value) || 0);
+  return `${'★'.repeat(rating)}${'☆'.repeat(Math.max(0, 5 - rating))}`;
+}
+
+function formatReviewDate(value: string) {
+  return new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric' }).format(new Date(value));
+}
+
+function ratingWidth(value: string) {
+  const rating = Number(value);
+  return Number.isFinite(rating) ? `${Math.min(100, Math.max(0, (rating / 5) * 100))}%` : '0%';
+}
 
 export default function VenueReviews() {
+  const { venueId = '' } = useParams();
+  const [venue, setVenue] = useState<Venue | null>(null);
+  const [reviews, setReviews] = useState<VenueReview[]>([]);
+  const [summary, setSummary] = useState<ReviewSummary>(defaultSummary);
+  const [status, setStatus] = useState('Loading reviews...');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.allSettled([getVenueFromApi(venueId), listVenueReviews(venueId)])
+      .then(([venueResult, reviewResult]) => {
+        if (!isMounted) return;
+
+        if (venueResult.status === 'fulfilled') {
+          setVenue(venueResult.value);
+        } else {
+          setVenue(null);
+        }
+
+        if (reviewResult.status === 'fulfilled') {
+          setReviews(reviewResult.value.reviews);
+          setSummary(reviewResult.value.summary);
+          setStatus('');
+        } else {
+          setStatus('Reviews are unavailable right now.');
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [venueId]);
+
+  const featuredReview = reviews[0];
+  const otherReviews = reviews.slice(1);
+  const venueName = venue?.name || 'this venue';
+
   return (
     <main className="reviews-page">
-      <ReviewsHeader />
+      <ReviewsHeader venueId={venueId} />
       <section className="reviews-wrap">
         <div className="reviews-hero">
           <div>
             <h1>Guest Perspectives</h1>
-            <p>Unfiltered experiences from verified events at the Kigali Heights Grand Ballroom.</p>
+            <p>Unfiltered experiences from events at {venueName}.</p>
           </div>
           <aside className="rating-summary">
-            <strong>4.8</strong>
-            <span>/ 5</span>
-            <p>★★★★★</p>
-            <small>Based on 142 verified reviews</small>
+            <strong>{summary.average}</strong>
+            {summary.count > 0 && <span>/ 5</span>}
+            <p>{renderStars(summary.average)}</p>
+            <small>{summary.count ? `Based on ${summary.count} verified reviews` : 'No reviews yet'}</small>
           </aside>
         </div>
 
@@ -26,14 +90,14 @@ export default function VenueReviews() {
           <aside className="detailed-ratings">
             <h2>Detailed Ratings</h2>
             {[
-              ['Cleanliness', '4.9', '98%'],
-              ['Service', '4.8', '96%'],
-              ['Value', '4.5', '90%'],
-              ['Location', '4.7', '94%'],
-            ].map(([label, value, width]) => (
+              ['Cleanliness', summary.categories.cleanliness],
+              ['Service', summary.categories.service],
+              ['Value', summary.categories.value],
+              ['Location', summary.categories.location],
+            ].map(([label, value]) => (
               <div className="rating-row" key={label}>
                 <span>{label}</span>
-                <i><b style={{ width }} /></i>
+                <i><b style={{ width: ratingWidth(value) }} /></i>
                 <em>{value}</em>
               </div>
             ))}
@@ -43,38 +107,54 @@ export default function VenueReviews() {
             <div className="review-tabs">
               <button className="active">All Reviews</button>
               <button>With Photos</button>
-              <button>Weddings</button>
-              <Link to="/venues/akagera/review/new">Leave your Review</Link>
+              <button>Events</button>
+              <Link to={`/venues/${venueId}/review/new`}>Leave your Review</Link>
             </div>
 
-            <article className="featured-review">
-              <div className="review-copy">
-                <div className="reviewer-line">
-                  <span className="review-avatar">A</span>
-                  <div><strong>Aline M.</strong><small>Verified Corporate Client · Oct 2026</small></div>
-                  <b>★★★★★</b>
+            {status && <p className="review-status">{status}</p>}
+
+            {!status && !featuredReview && (
+              <article className="plain-review empty-review">
+                <h2>No reviews yet</h2>
+                <p>Be the first guest to share an experience for this venue.</p>
+              </article>
+            )}
+
+            {featuredReview && (
+              <article className="featured-review">
+                <div className="review-copy">
+                  <div className="reviewer-line">
+                    <span className="review-avatar">{featuredReview.reviewerName.slice(0, 1)}</span>
+                    <div>
+                      <strong>{featuredReview.reviewerName}</strong>
+                      <small>{featuredReview.reviewerRole} · {formatReviewDate(featuredReview.createdAt)}</small>
+                    </div>
+                    <b>{renderStars(featuredReview.rating)}</b>
+                  </div>
+                  <h2>{featuredReview.title}</h2>
+                  <p>{featuredReview.body}</p>
+                  <blockquote>
+                    <strong>{featuredReview.eventType}</strong>
+                    Rated {featuredReview.rating}/5 overall.
+                  </blockquote>
                 </div>
-                <h2>Impeccable execution for our tech summit</h2>
-                <p>The ballroom exceeded our expectations. The natural light from the floor-to-ceiling windows overlooking Kigali was stunning. Catering seamlessly handled 300 guests without feeling crowded.</p>
-                <blockquote>
-                  <strong>Response from Venue Manager</strong>
-                  Thank you, Aline. It was a pleasure hosting your summit. We hope to welcome your team back to Kigali soon.
-                </blockquote>
-              </div>
-              <img src={ballroomImage} alt="Reviewed ballroom event setup" />
-            </article>
+                {featuredReview.mediaUrl || venue?.heroImage ? (
+                  <img src={featuredReview.mediaUrl || venue?.heroImage} alt={`${venueName} reviewed event setup`} />
+                ) : null}
+              </article>
+            )}
 
-            <article className="plain-review">
-              <div className="reviewer-line">
-                <span className="review-avatar">J</span>
-                <div><strong>Jean-Paul R.</strong><small>Verified Wedding Client · Sep 2026</small></div>
-                <b>★★★★☆</b>
-              </div>
-              <h2>A beautiful night, slight delay in service</h2>
-              <p>The venue is undoubtedly one of the most beautiful in Kigali. The decor team transformed the space magically for our reception. Our only minor note was that dinner service started about 30 minutes later than scheduled.</p>
-            </article>
-
-            <button className="load-more">Load More Experiences⌄</button>
+            {otherReviews.map((review) => (
+              <article className="plain-review" key={review.id}>
+                <div className="reviewer-line">
+                  <span className="review-avatar">{review.reviewerName.slice(0, 1)}</span>
+                  <div><strong>{review.reviewerName}</strong><small>{review.reviewerRole} · {formatReviewDate(review.createdAt)}</small></div>
+                  <b>{renderStars(review.rating)}</b>
+                </div>
+                <h2>{review.title}</h2>
+                <p>{review.body}</p>
+              </article>
+            ))}
           </section>
         </div>
       </section>
@@ -83,20 +163,20 @@ export default function VenueReviews() {
   );
 }
 
-export function ReviewsHeader() {
+export function ReviewsHeader({ venueId = '' }: { venueId?: string }) {
   return (
     <header className="reviews-header">
       <Link to="/venues" className="reviews-logo">VenueElite</Link>
       <nav>
         <Link to="/venues">Discover</Link>
         <Link to="/venues/search">Collections</Link>
-        <Link className="active" to="/venues/akagera/reviews">Reviews</Link>
-        <Link to="/venues/akagera/book">Concierge</Link>
+        <Link className="active" to={`/venues/${venueId}/reviews`}>Reviews</Link>
+        <Link to={`/venues/${venueId}/book`}>Concierge</Link>
       </nav>
       <div>
         <input placeholder="Search venues..." />
         <Link to="/owner/register">List Your Venue</Link>
-        <span>♧ ◎</span>
+        <span>Account</span>
       </div>
     </header>
   );

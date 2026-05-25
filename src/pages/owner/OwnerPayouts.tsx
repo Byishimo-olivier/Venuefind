@@ -1,27 +1,31 @@
 import { OwnerShell } from './OwnerShell';
-
-const ledger = [
-  ['Aurora Gala Night', 'Deposit (50%)', 'Rwf12,500.00', 'Settled'],
-  ['Tech Summit 2023', 'Final Balance', 'Rwf45,000.00', 'Pending'],
-  ['Boutique Wedding', 'Refunded', '-Rwf2,400.00', 'Adjusted'],
-];
+import { formatRwf, labelStatus, statusClass, useOwnerData, useOwnerSummary } from './ownerData';
 
 export default function OwnerPayouts() {
+  const { venues, bookings, isLoading, error } = useOwnerData();
+  const summary = useOwnerSummary(venues, bookings);
+  const heldDeposits = bookings.reduce((total, booking) => total + Number(booking.totals?.depositDue || 0), 0);
+  const finalPayments = Math.max(summary.totalRevenue - heldDeposits, 0);
+  const depositShare = summary.totalRevenue ? Math.round((heldDeposits / summary.totalRevenue) * 100) : 0;
+  const finalShare = summary.totalRevenue ? Math.round((finalPayments / summary.totalRevenue) * 100) : 0;
+
   return (
     <OwnerShell section="Payouts">
       <section className="owner-content">
+        {isLoading && <p>Loading payouts...</p>}
+        {error && <p className="field-error centered">{error}</p>}
         <div className="payout-top">
           <article className="balance-card">
             <span>Available Balance</span>
-            <h1>Rwf142,850.24</h1>
-            <p>↗ +12.5% from last period</p>
-            <div><span>Next Payout<br /><strong>October 24, 2026</strong></span><span>Status<br /><strong>● Processing</strong></span></div>
+            <h1>{formatRwf(summary.paidRevenue)}</h1>
+            <p>{formatRwf(summary.pendingRevenue)} pending from active bookings</p>
+            <div><span>Next Payout<br /><strong>After event completion</strong></span><span>Status<br /><strong>Processing</strong></span></div>
             <button>Request Instant Payout</button>
           </article>
           <article className="split-card">
             <h2>Split Tracking</h2>
-            <label>Deposits Held <b>42,500</b><i><span style={{ width: '76%' }} /></i></label>
-            <label>Final Payments <b>100,550</b><i><span style={{ width: '94%' }} /></i></label>
+            <label>Deposits Held <b>{formatRwf(heldDeposits)}</b><i><span style={{ width: `${depositShare}%` }} /></i></label>
+            <label>Final Payments <b>{formatRwf(finalPayments)}</b><i><span style={{ width: `${finalShare}%` }} /></i></label>
             <p>Deposits are released 48h after booking. Final balances released post-event.</p>
           </article>
         </div>
@@ -31,19 +35,22 @@ export default function OwnerPayouts() {
           <table>
             <thead><tr><th>Client / Event</th><th>Transaction ID</th><th>Type</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
             <tbody>
-              {ledger.map(([event, type, amount, status], index) => (
-                <tr key={event}>
-                  <td><strong>{event}</strong><span>Client: Sterling Media</span></td>
-                  <td>#TXN-882{index}-AV</td>
-                  <td>{type}</td>
-                  <td>{amount}</td>
-                  <td><em className={status.toLowerCase()}>{status}</em></td>
-                  <td>⋮</td>
+              {bookings.map((booking) => (
+                <tr key={booking.id}>
+                  <td><strong>{booking.venueName}</strong><span>Client: {booking.customerName || booking.customerEmail || 'Customer'}</span></td>
+                  <td>{booking.confirmationNumber || booking.id}</td>
+                  <td>{booking.paymentStatus === 'paid' ? 'Final Balance' : 'Deposit'}</td>
+                  <td>{formatRwf(booking.amountPaid || booking.totals?.depositDue || 0)}</td>
+                  <td><em className={statusClass(booking.paymentStatus)}>{labelStatus(booking.paymentStatus)}</em></td>
+                  <td>View</td>
                 </tr>
               ))}
+              {!isLoading && bookings.length === 0 && (
+                <tr><td colSpan={6}>No payouts are available yet.</td></tr>
+              )}
             </tbody>
           </table>
-          <button className="load-history">Load Full Transaction History →</button>
+          <button className="load-history">Load Full Transaction History</button>
         </section>
 
         <section className="dispute-card">

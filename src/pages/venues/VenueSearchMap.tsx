@@ -1,24 +1,28 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import type { Venue } from '../../data/venues';
-import { getAllVenues } from '../../data/venues';
 import { listVenues } from '../../services/venues';
 import { VenueHeader } from './VenueHome';
 import './venues.css';
 
 export default function VenueSearchMap() {
-  const [venues, setVenues] = useState<Venue[]>(() => getAllVenues());
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
 
     listVenues()
       .then((items) => {
-        if (isMounted) setVenues(items.length ? items : getAllVenues());
+        if (!isMounted) return;
+        setVenues(items);
+        setError('');
       })
-      .catch(() => {
-        if (isMounted) setVenues(getAllVenues());
+      .catch((loadError) => {
+        if (!isMounted) return;
+        setVenues([]);
+        setError(loadError instanceof Error ? loadError.message : 'Could not load backend venues.');
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -87,6 +91,9 @@ export default function VenueSearchMap() {
                 </div>
               </Link>
             ))}
+            {!isLoading && venues.length === 0 && (
+              <p className="empty-venues">{error || 'No venues found in the backend database yet.'}</p>
+            )}
           </div>
         </section>
 

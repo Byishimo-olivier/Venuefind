@@ -337,7 +337,9 @@
 }
 
 .feature-venue img,
-.stacked-venues img {
+.feature-venue video,
+.stacked-venues img,
+.stacked-venues video {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -458,7 +460,8 @@
   text-decoration: none;
 }
 
-.recent-grid img {
+.recent-grid img,
+.recent-grid video {
   width: 100%;
   aspect-ratio: 1.35;
   border-radius: 5px;
@@ -2649,6 +2652,27 @@
   letter-spacing: 0.08em;
 }
 
+.star-input {
+  display: flex;
+  gap: 4px;
+  letter-spacing: 0;
+}
+
+.star-input button {
+  border: 0;
+  background: transparent;
+  color: #c8cdd2;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  padding: 0;
+}
+
+.star-input button.active,
+.reviewer-line b {
+  color: #9d741f;
+}
+
 .review-form-card input,
 .review-form-card textarea {
   border: 0;
@@ -2713,15 +2737,36 @@
   border: 0;
   background: transparent;
   color: #102033;
+  cursor: pointer;
+  font: inherit;
   font-weight: 800;
   text-decoration: none;
 }
 
-.review-actions a {
+.review-actions button[type='submit'] {
   border-radius: 5px;
   background: #102033;
   color: #fff;
   padding: 14px 24px;
+}
+
+.review-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
+.review-status,
+.review-error,
+.empty-venues {
+  border-radius: 5px;
+  background: #fff;
+  color: #657080;
+  padding: 16px 18px;
+}
+
+.review-error {
+  background: #fff0f0;
+  color: #9b1c1c;
 }
 
 .owner-page {

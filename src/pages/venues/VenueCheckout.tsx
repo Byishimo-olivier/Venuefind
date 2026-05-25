@@ -19,7 +19,7 @@ function formatBalanceDue(value: string) {
 }
 
 export default function VenueCheckout() {
-  const { venueId = 'akagera' } = useParams();
+  const { venueId = '' } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const bookingId = searchParams.get('bookingId') || '';

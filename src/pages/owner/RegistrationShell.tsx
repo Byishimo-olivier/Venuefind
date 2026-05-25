@@ -14,7 +14,7 @@ export function RegistrationShell({ children, step }: { children: ReactNode; ste
     <main className="registration-page">
       <header className="registration-top">
         <Link to="/venues" className="reg-logo">Umurage Marketplace</Link>
-        <nav><Link to="/venues">Venues</Link><Link to="/venues/search">Services</Link><Link to="/venues/akagera">Heritage</Link><Link to="/login">Support</Link></nav>
+        <nav><Link to="/venues">Venues</Link><Link to="/venues/search">Services</Link><Link to="/venues/search">Heritage</Link><Link to="/login">Support</Link></nav>
         <Link to="/login">Partner Login</Link>
       </header>
       <aside className="registration-side">

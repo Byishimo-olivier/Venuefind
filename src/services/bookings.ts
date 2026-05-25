@@ -25,6 +25,10 @@ export type BookingTotals = {
 export type Booking = {
   id: string;
   confirmationNumber: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  ownerId?: string | null;
   venueId: string;
   venueName: string;
   venueLocation: string;
@@ -37,6 +41,10 @@ export type Booking = {
   totals: BookingTotals;
   status: string;
   paymentStatus: string;
+  amountPaid?: number;
+  balanceRemaining?: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Payment = {
@@ -69,6 +77,10 @@ type BookingResponse = {
   booking: Booking;
 };
 
+type BookingsResponse = {
+  bookings: Booking[];
+};
+
 type PaymentResponse = {
   payment: Payment;
 };
@@ -99,6 +111,14 @@ export async function createBooking(input: {
   });
 
   return result.booking;
+}
+
+export async function listBookings() {
+  const result = await apiRequest<BookingsResponse>('/api/bookings', {
+    auth: true,
+  });
+
+  return result.bookings;
 }
 
 export async function getBooking(id: string) {

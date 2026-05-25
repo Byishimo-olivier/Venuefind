@@ -1,44 +1,47 @@
+import { Link } from 'react-router-dom';
 import { OwnerShell, MetricCard } from './OwnerShell';
-
-const rows = [
-  ['#INV-88210', 'Katherine & Michael', 'Oct 28, 2026', '$14,500.00', 'Completed'],
-  ['#INV-88209', 'TechGlobal Inc.', 'Oct 26, 2026', '$3,200.00', 'Pending'],
-  ['#INV-88194', 'David Jenkins', 'Oct 24, 2026', '($450.00)', 'Refunded'],
-  ['#INV-88188', 'Starlight Foundation', 'Oct 22, 2026', '$28,900.00', 'Completed'],
-];
+import { formatDate, formatRwf, labelStatus, statusClass, useOwnerData, useOwnerSummary } from './ownerData';
 
 export default function OwnerTransactions() {
+  const { venues, bookings, isLoading, error } = useOwnerData();
+  const summary = useOwnerSummary(venues, bookings);
+
   return (
     <OwnerShell section="Transaction Log">
       <section className="owner-content">
         <div className="owner-heading"><div><h1>Financial History</h1><p>Review your venue's fiscal health and manage transactional documents.</p></div></div>
+        {isLoading && <p>Loading financial history...</p>}
+        {error && <p className="field-error centered">{error}</p>}
         <div className="owner-metrics-grid finance">
-          <MetricCard label="Total Fiscal Volume" value="Rwf412,850" accent="gold" delta="+12%" />
-          <MetricCard label="Pending Invoices" value="Rwf18,420" delta="6 Active" />
-          <article className="settlement-card"><span>Last Settlement</span><strong>Rwf12,900</strong><button>Settled Today 14:00</button></article>
-          <article className="create-invoice">⊕<strong>Create New Invoice</strong><span>Manual transaction entry</span></article>
+          <MetricCard label="Total Fiscal Volume" value={formatRwf(summary.totalRevenue)} accent="gold" delta={`${summary.totalBookings} invoices`} />
+          <MetricCard label="Pending Invoices" value={formatRwf(summary.pendingRevenue)} delta={`${summary.pendingBookings} active`} />
+          <article className="settlement-card"><span>Last Settlement</span><strong>{formatRwf(summary.paidRevenue)}</strong><button>{summary.confirmedBookings} confirmed</button></article>
+          <article className="create-invoice">+<strong>Create New Invoice</strong><span>Manual transaction entry</span></article>
         </div>
         <section className="transaction-table-card">
-          <div className="table-toolbar"><div><button className="active">All</button><button>Completed</button><button>Pending</button><button>Refunded</button></div><button>↧ Export CSV</button></div>
+          <div className="table-toolbar"><div><button className="active">All</button><button>Completed</button><button>Pending</button><button>Refunded</button></div><button>Export CSV</button></div>
           <table>
             <thead><tr><th>Invoice ID</th><th>Client Name</th><th>Date</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {rows.map(([id, client, date, amount, status]) => (
-                <tr key={id}>
-                  <td><strong>{id}</strong><span>Event Package</span></td>
-                  <td>{client}</td>
-                  <td>{date}</td>
-                  <td>{amount}</td>
-                  <td><em className={status.toLowerCase()}>{status}</em></td>
-                  <td>⋯</td>
+              {bookings.map((booking) => (
+                <tr key={booking.id}>
+                  <td><strong>{booking.confirmationNumber || booking.id}</strong><span>{booking.venueName}</span></td>
+                  <td>{booking.customerName || booking.customerEmail || 'Customer'}</td>
+                  <td>{formatDate(booking.date)}</td>
+                  <td>{formatRwf(booking.totals?.total)}</td>
+                  <td><em className={statusClass(booking.paymentStatus || booking.status)}>{labelStatus(booking.paymentStatus || booking.status)}</em></td>
+                  <td><Link to={`/venues/${booking.venueId}/confirmed?bookingId=${encodeURIComponent(booking.id)}`}>View</Link></td>
                 </tr>
               ))}
+              {!isLoading && bookings.length === 0 && (
+                <tr><td colSpan={6}>No transaction history yet.</td></tr>
+              )}
             </tbody>
           </table>
         </section>
         <div className="finance-bottom">
-          <article className="tax-card"><h2>Automate your quarterly tax reconciliation</h2><p>Connect your account directly to QuickBooks or Xero to sync every invoice and expense automatically.</p><button>Enable Integration</button></article>
-          <article className="support-card"><strong>Secure Document Vault</strong><p>All financial documents are encrypted and backed up daily.</p></article>
+          <article className="tax-card"><h2>Automate your quarterly tax reconciliation</h2><p>Export the live booking ledger for accounting and payout review.</p><button>Enable Integration</button></article>
+          <article className="support-card"><strong>Secure Document Vault</strong><p>All financial documents are tied to backend booking records.</p></article>
         </div>
       </section>
     </OwnerShell>

@@ -42,17 +42,11 @@ function App() {
         <Route path="/venue" element={<Navigate to="/venues" replace />} />
         <Route path="/venues" element={<VenueHome />} />
         <Route path="/venues/search" element={<VenueSearchMap />} />
-        <Route path="/venues/akagera" element={<VenueDetails />} />
         <Route path="/venues/:venueId" element={<VenueDetails />} />
-        <Route path="/venues/akagera/book" element={<VenueBooking />} />
         <Route path="/venues/:venueId/book" element={<VenueBooking />} />
-        <Route path="/venues/akagera/checkout" element={<VenueCheckout />} />
         <Route path="/venues/:venueId/checkout" element={<VenueCheckout />} />
-        <Route path="/venues/akagera/confirmed" element={<BookingConfirmation />} />
         <Route path="/venues/:venueId/confirmed" element={<BookingConfirmation />} />
-        <Route path="/venues/akagera/reviews" element={<VenueReviews />} />
         <Route path="/venues/:venueId/reviews" element={<VenueReviews />} />
-        <Route path="/venues/akagera/review/new" element={<VenueReviewForm />} />
         <Route path="/venues/:venueId/review/new" element={<VenueReviewForm />} />
         <Route path="/owner" element={<ProtectedRoute allowedRoles={['owner']}><OwnerDashboard /></ProtectedRoute>} />
         <Route path="/owner/transactions" element={<ProtectedRoute allowedRoles={['owner']}><OwnerTransactions /></ProtectedRoute>} />

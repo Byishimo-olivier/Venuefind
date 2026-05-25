@@ -58,51 +58,6 @@ export const defaultVenueAddons: VenueAddon[] = [
   { id: 'premium-av', name: 'Premium Audiovisual Suite', description: 'Projectors, surround sound, lighting, and mic setup.', amount: 200000 },
 ];
 
-export const defaultVenue: Venue = {
-  id: 'akagera',
-  name: 'Akagera Safari Lodge Event Space',
-  contactPerson: 'Jean Damascene Nkurunziza',
-  phone: '+250 788 000 000',
-  email: 'contact@akageralodge.rw',
-  category: 'Grasslands Earth Collection',
-  label: 'Indoor/Outdoor',
-  location: 'Akagera National Park, Rwanda',
-  province: 'Eastern Province',
-  setting: 'National Park',
-  description:
-    'Perched on a ridge overlooking Lake Ihema, the Akagera Safari Lodge Event Space offers an unparalleled fusion of wild adventure and high-end sophistication.',
-  capacity: 'Up to 250',
-  price: 'RWF 1,250,000',
-  cleaningFee: 'RWF 50,000',
-  decorFee: 'RWF 200,000',
-  heroImage: 'https://images.pexels.com/photos/260922/pexels-photo-260922.jpeg?auto=compress&cs=tinysrgb&w=1400',
-  heroMediaType: 'image',
-  galleryImages: [
-    'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg?auto=compress&cs=tinysrgb&w=800',
-    'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=800',
-  ],
-  galleryMedia: [
-    { url: 'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg?auto=compress&cs=tinysrgb&w=800', type: 'image' },
-    { url: 'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=800', type: 'image' },
-  ],
-  addons: defaultVenueAddons,
-  amenities: [
-    { icon: 'P', title: 'Valet Service', body: 'Professional parking for up to 100 private vehicles.' },
-    { icon: 'WiFi', title: 'Fiber Internet', body: 'High-speed connectivity for event teams and guests.' },
-    { icon: 'AV', title: 'Audio Visual', body: 'Presentation sound, lighting, and screen support.' },
-    { icon: 'Food', title: 'Safari Catering', body: 'World-class cuisine with a modern Rwandan twist.' },
-    { icon: 'Power', title: 'Gen-set Backup', body: 'Uninterrupted power for your critical event moments.' },
-    { icon: 'Decor', title: 'Traditional Decor', body: 'Curated imigongo and local craft styling options.' },
-  ],
-  tags: ['Fiber Internet', 'Catering', '250 guests'],
-  rating: '4.9',
-  reviews: 32,
-  status: 'Approved',
-  tier: 'Excellence Hub',
-  tin: '102345678',
-  rdbNumber: '100234567',
-};
-
 export type VenueDraft = Partial<Venue> & {
   businessType?: 'Venue' | 'Service';
   languages?: string;
@@ -151,13 +106,12 @@ export function getOwnerVenues(): Venue[] {
 }
 
 export function getAllVenues(): Venue[] {
-  const ownerVenues = getOwnerVenues();
-  const ownerHasDefault = ownerVenues.some((venue) => venue.id === defaultVenue.id);
-  return ownerHasDefault ? ownerVenues : [defaultVenue, ...ownerVenues];
+  return getOwnerVenues();
 }
 
-export function getVenueById(id = defaultVenue.id): Venue {
-  return getAllVenues().find((venue) => venue.id === id) || defaultVenue;
+export function getVenueById(id?: string): Venue | undefined {
+  const venues = getAllVenues();
+  return id ? venues.find((venue) => venue.id === id) : venues[0];
 }
 
 export function createSlug(value: string) {

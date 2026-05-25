@@ -1,7 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import type { Venue } from '../../data/venues';
-import { getVenueById } from '../../data/venues';
 import { getAuthToken } from '../../services/api';
 import { createBooking, getBookingAvailability, listBookingAddons } from '../../services/bookings';
 import type { BookingAddon } from '../../services/bookings';
@@ -59,10 +58,10 @@ function formatSelectedDate(dateKey: string) {
 }
 
 export default function VenueBooking() {
-  const { venueId = 'akagera' } = useParams();
+  const { venueId = '' } = useParams();
   const navigate = useNavigate();
   const today = useMemo(() => new Date(), []);
-  const [venue, setVenue] = useState<Venue>(() => getVenueById(venueId));
+  const [venue, setVenue] = useState<Venue | null>(null);
   const [addons, setAddons] = useState<BookingAddon[]>([]);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
   const [bookedDates, setBookedDates] = useState<string[]>([]);
@@ -88,7 +87,7 @@ export default function VenueBooking() {
         }
       })
       .catch(() => {
-        if (isMounted) setVenue(getVenueById(venueId));
+        if (isMounted) setVenue(null);
       });
 
     listBookingAddons(venueId)
@@ -126,9 +125,9 @@ export default function VenueBooking() {
     [addons, selectedAddonIds],
   );
   const calendarCells = useMemo(() => getMonthCells(visibleMonth), [visibleMonth]);
-  const baseVenueFee = parseMoney(venue.price);
-  const cleaningFee = parseMoney(venue.cleaningFee);
-  const decorFee = parseMoney(venue.decorFee);
+  const baseVenueFee = parseMoney(venue?.price || '');
+  const cleaningFee = parseMoney(venue?.cleaningFee || '');
+  const decorFee = parseMoney(venue?.decorFee || '');
   const addonsTotal = selectedAddons.reduce((total, addon) => total + addon.amount, 0);
   const subtotal = baseVenueFee + cleaningFee + decorFee + addonsTotal;
   const vat = Math.round(subtotal * 0.18);
@@ -180,6 +179,12 @@ export default function VenueBooking() {
   return (
     <main className="booking-page">
       <BookingHeader venueId={venueId} />
+      {!venue ? (
+        <section className="booking-wrap">
+          <p className="empty-venues">Venue not found in the backend database.</p>
+          <Link to="/venues/search">Browse available venues</Link>
+        </section>
+      ) : (
       <section className="booking-wrap">
         <div className="booking-title">
           <h1>Reserve Your Experience</h1>
@@ -296,11 +301,12 @@ export default function VenueBooking() {
           </aside>
         </div>
       </section>
+      )}
     </main>
   );
 }
 
-export function BookingHeader({ venueId = 'akagera' }: { venueId?: string }) {
+export function BookingHeader({ venueId = '' }: { venueId?: string }) {
   return (
     <header className="booking-header">
       <Link to="/venues" className="booking-logo">The Venue Collective</Link>
