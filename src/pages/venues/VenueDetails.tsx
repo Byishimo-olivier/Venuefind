@@ -5,6 +5,7 @@ import type { Venue } from '../../data/venues';
 import { getVenue as getVenueFromApi, listVenues } from '../../services/venues';
 import { listVenueReviews } from '../../services/reviews';
 import type { VenueReview } from '../../services/reviews';
+import { VenueAssistant } from './VenueAssistant';
 import { VenueHeader } from './VenueHome';
 import './venues.css';
 
@@ -337,6 +338,7 @@ export default function VenueDetails() {
           <Link to="/login">Contact Support</Link>
         </div>
       </footer>
+      <VenueAssistant venues={[venue, ...more]} />
     </main>
   );
 }

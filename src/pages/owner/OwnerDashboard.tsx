@@ -1,17 +1,28 @@
 import { Link } from 'react-router-dom';
 import { OwnerShell, MetricCard } from './OwnerShell';
-import { formatRwf, useOwnerData, useOwnerSummary } from './ownerData';
+import { bookingExportRows, exportCsv, filterBookings, filterVenues, formatRwf, useOwnerData, useOwnerSearch, useOwnerSummary, venueExportRows } from './ownerData';
 
 export default function OwnerDashboard() {
   const { venues, bookings, isLoading, error } = useOwnerData();
-  const summary = useOwnerSummary(venues, bookings);
+  const { query, setQuery } = useOwnerSearch();
+  const filteredVenues = filterVenues(venues, query);
+  const filteredBookings = filterBookings(bookings, query);
+  const summary = useOwnerSummary(filteredVenues, filteredBookings);
 
   return (
     <OwnerShell>
       <section className="owner-content">
         <div className="owner-heading">
           <div><p>Financial Intelligence</p><h1>Executive Dashboard</h1></div>
-          <div><button>Last 30 Days</button><button className="gold">Export PDF</button></div>
+          <div>
+            <button type="button" onClick={() => setQuery('')}>Clear Search</button>
+            <button className="gold" type="button" onClick={() => exportCsv('owner-dashboard-summary', [
+              { metric: 'Total Revenue', value: summary.totalRevenue },
+              { metric: 'Total Bookings', value: summary.totalBookings },
+              { metric: 'Confirmed Guests', value: summary.guestCount },
+              { metric: 'Average Ticket', value: summary.averageTicket },
+            ])}>Export Summary</button>
+          </div>
         </div>
 
         {isLoading && <p>Loading owner dashboard...</p>}
@@ -21,7 +32,7 @@ export default function OwnerDashboard() {
           <MetricCard label="Total Revenue" value={formatRwf(summary.totalRevenue)} delta={`${summary.totalBookings} bookings`} />
           <MetricCard label="Confirmed Guests" value={String(summary.guestCount)} accent="gold" delta={`${summary.upcomingBookings} upcoming`} />
           <MetricCard label="Booking Conversion" value={`${summary.conversionRate}%`} delta={`${summary.confirmedBookings} confirmed`} />
-          <MetricCard label="Average Ticket" value={formatRwf(summary.averageTicket)} accent="gold" delta={`${venues.length} venues`} />
+          <MetricCard label="Average Ticket" value={formatRwf(summary.averageTicket)} accent="gold" delta={`${filteredVenues.length} venues`} />
         </div>
 
         <div className="forecast-grid">
@@ -29,7 +40,7 @@ export default function OwnerDashboard() {
             <div className="card-title"><h2>Venue Demand Forecasting</h2><p>Booking volume by month from live reservations.</p></div>
             <div className="chart-bars">
               {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
-                const monthBookings = bookings.filter((booking) => new Date(`${booking.date}T00:00:00`).getMonth() === index).length;
+                const monthBookings = filteredBookings.filter((booking) => new Date(`${booking.date}T00:00:00`).getMonth() === index).length;
                 const height = Math.max(35, 55 + monthBookings * 22);
                 return (
                   <div key={month}>
@@ -62,8 +73,8 @@ export default function OwnerDashboard() {
             <div className="insight-controls">
               <select><option>Revenue by Category</option></select>
               <select><option>Rolling 12 Months</option></select>
-              <button>Build Insight</button>
-              <button className="ghost">Clear Filters</button>
+              <button type="button" onClick={() => exportCsv('owner-bookings', bookingExportRows(filteredBookings))}>Export Bookings</button>
+              <button className="ghost" type="button" onClick={() => exportCsv('owner-venues', venueExportRows(filteredVenues))}>Export Venues</button>
             </div>
           </div>
           <aside>

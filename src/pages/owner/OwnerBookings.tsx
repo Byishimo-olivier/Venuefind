@@ -1,10 +1,20 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { ProviderShell } from './ProviderShell';
-import { formatDate, formatRwf, labelStatus, statusClass, useOwnerData, useOwnerSummary } from './ownerData';
+import { bookingExportRows, exportCsv, filterBookings, formatDate, formatRwf, labelStatus, statusClass, useOwnerData, useOwnerSearch, useOwnerSummary } from './ownerData';
 
 export default function OwnerBookings() {
   const { venues, bookings, isLoading, error } = useOwnerData();
+  const { query } = useOwnerSearch();
+  const [statusFilter, setStatusFilter] = useState('all');
   const summary = useOwnerSummary(venues, bookings);
+  const searchedBookings = filterBookings(bookings, query);
+  const filteredBookings = searchedBookings.filter((booking) => {
+    if (statusFilter === 'confirmed') return booking.status === 'confirmed';
+    if (statusFilter === 'pending') return String(booking.status || '').includes('pending');
+    if (statusFilter === 'completed') return booking.status === 'completed' || booking.paymentStatus === 'paid';
+    return true;
+  });
 
   return (
     <ProviderShell>
@@ -12,14 +22,14 @@ export default function OwnerBookings() {
         <div className="bookings-top">
           <h1>Bookings</h1>
           <p>Curate and manage your event calendar with precision.</p>
-          <div><Link to="/owner/transactions">Export Ledger</Link><Link to="/owner/register" className="gold">Manual Entry</Link></div>
+          <div><button type="button" onClick={() => exportCsv('owner-bookings', bookingExportRows(filteredBookings))}>Export Ledger</button><Link to="/owner/register" className="gold">Manual Entry</Link></div>
         </div>
         <div className="booking-filter-tabs">
-          <button className="active">All Bookings ({bookings.length})</button>
-          <button>Confirmed ({summary.confirmedBookings})</button>
-          <button>Pending Deposit ({summary.pendingBookings})</button>
-          <button>Completed ({summary.completedBookings})</button>
-          <span>More Filters</span>
+          <button className={statusFilter === 'all' ? 'active' : ''} onClick={() => setStatusFilter('all')}>All Bookings ({bookings.length})</button>
+          <button className={statusFilter === 'confirmed' ? 'active' : ''} onClick={() => setStatusFilter('confirmed')}>Confirmed ({summary.confirmedBookings})</button>
+          <button className={statusFilter === 'pending' ? 'active' : ''} onClick={() => setStatusFilter('pending')}>Pending Deposit ({summary.pendingBookings})</button>
+          <button className={statusFilter === 'completed' ? 'active' : ''} onClick={() => setStatusFilter('completed')}>Completed ({summary.completedBookings})</button>
+          <button type="button" onClick={() => setStatusFilter('all')}>Reset Filters</button>
         </div>
         {isLoading && <p>Loading bookings...</p>}
         {error && <p className="field-error centered">{error}</p>}
@@ -27,7 +37,7 @@ export default function OwnerBookings() {
           <table>
             <thead><tr><th>Client & Event</th><th>Date & Time</th><th>Guests</th><th>Total Value</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {bookings.map((booking) => (
+              {filteredBookings.map((booking) => (
                 <tr key={booking.id}>
                   <td><strong>{booking.venueName}</strong><span>{booking.customerName || booking.customerEmail || 'Customer'}</span></td>
                   <td>{formatDate(booking.date)}<span>{booking.startTime} - {booking.durationHours}h</span></td>
@@ -37,8 +47,8 @@ export default function OwnerBookings() {
                   <td><Link to={`/venues/${booking.venueId}/confirmed?bookingId=${encodeURIComponent(booking.id)}`}>View</Link></td>
                 </tr>
               ))}
-              {!isLoading && bookings.length === 0 && (
-                <tr><td colSpan={6}>No bookings have been made for your venues yet.</td></tr>
+              {!isLoading && filteredBookings.length === 0 && (
+                <tr><td colSpan={6}>{bookings.length ? 'No bookings match your current search or filter.' : 'No bookings have been made for your venues yet.'}</td></tr>
               )}
             </tbody>
           </table>

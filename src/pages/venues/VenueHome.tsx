@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Venue } from '../../data/venues';
 import { clearAuthSession, getAuthUser } from '../../services/api';
+import { addFavoriteVenue, listFavoriteVenueIds, removeFavoriteVenue } from '../../services/favorites';
 import { listVenues } from '../../services/venues';
+import { AiRecommendations, VenueAssistant } from './VenueAssistant';
+import { FavoriteButton } from './FavoriteButton';
 import './venues.css';
 
 const heroImage =
@@ -15,6 +18,18 @@ const provinceImages: Record<string, string> = {
   'Eastern Province': 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?auto=format&fit=crop&w=500&q=80',
   'Southern Province': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=500&q=80',
   'Western Province': 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=500&q=80',
+};
+
+type HomeFilters = {
+  location: string;
+  checkInDate: string;
+  checkOutDate: string;
+};
+
+const emptyHomeFilters: HomeFilters = {
+  location: '',
+  checkInDate: '',
+  checkOutDate: '',
 };
 
 function VenueMedia({ venue }: { venue: Venue }) {
@@ -34,11 +49,51 @@ function getInitials(fullName: string): string {
     .slice(0, 2);
 }
 
+function hasActiveHomeFilters(filters: HomeFilters) {
+  return Boolean(filters.location.trim() || filters.checkInDate || filters.checkOutDate);
+}
+
+function venueMatchesLocation(venue: Venue, locationQuery: string) {
+  const terms = locationQuery
+    .toLowerCase()
+    .split(/[\s,]+/)
+    .map((term) => term.trim())
+    .filter(Boolean)
+    .filter((term) => term !== 'rwanda');
+
+  if (terms.length === 0) return true;
+
+  const searchableText = [
+    venue.name,
+    venue.location,
+    venue.province,
+    venue.category,
+    venue.label,
+    venue.setting,
+    venue.description,
+    ...(venue.tags || []),
+  ].join(' ').toLowerCase();
+
+  return terms.every((term) => searchableText.includes(term));
+}
+
+function getSearchPath(filters: HomeFilters) {
+  const params = new URLSearchParams();
+  if (filters.location.trim()) params.set('location', filters.location.trim());
+  if (filters.checkInDate) params.set('checkIn', filters.checkInDate);
+  if (filters.checkOutDate) params.set('checkOut', filters.checkOutDate);
+  const query = params.toString();
+  return `/venues/all${query ? `?${query}` : ''}`;
+}
+
 export default function VenueHome() {
   const [location, setLocation] = useState('Kigali, Rwanda');
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
+  const [activeFilters, setActiveFilters] = useState<HomeFilters>(emptyHomeFilters);
+  const [filterError, setFilterError] = useState('');
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [favoriteVenueIds, setFavoriteVenueIds] = useState<string[]>([]);
   const [isLoadingVenues, setIsLoadingVenues] = useState(true);
   const [venueLoadError, setVenueLoadError] = useState('');
   const navigate = useNavigate();
@@ -66,10 +121,28 @@ export default function VenueHome() {
     };
   }, []);
 
-  const featuredVenue = venues[0];
-  const stackedVenues = venues.slice(1, 3);
+  useEffect(() => {
+    if (!getAuthUser()) return;
+    let isMounted = true;
+    listFavoriteVenueIds()
+      .then((ids) => {
+        if (isMounted) setFavoriteVenueIds(ids);
+      })
+      .catch(() => {
+        if (isMounted) setFavoriteVenueIds([]);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const hasFilters = hasActiveHomeFilters(activeFilters);
+  const visibleVenues = venues.filter((venue) => venueMatchesLocation(venue, activeFilters.location));
+  const featuredVenue = visibleVenues[0];
+  const stackedVenues = visibleVenues.slice(1, 3);
+  const searchPath = getSearchPath(activeFilters);
   const provinceCards = Object.entries(provinceImages).map(([name, image]) => {
-    const count = venues.filter((venue) => venue.province === name).length;
+    const count = visibleVenues.filter((venue) => venue.province === name).length;
     return {
       name,
       image,
@@ -79,7 +152,37 @@ export default function VenueHome() {
 
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
-    navigate(`/venues/search?location=${encodeURIComponent(location)}`);
+    if (checkInDate && checkOutDate && checkOutDate < checkInDate) {
+      setFilterError('Check-out date must be after check-in date.');
+      return;
+    }
+
+    setActiveFilters({ location, checkInDate, checkOutDate });
+    setFilterError('');
+  };
+
+  const clearFilters = () => {
+    setLocation('');
+    setCheckInDate('');
+    setCheckOutDate('');
+    setActiveFilters(emptyHomeFilters);
+    setFilterError('');
+  };
+
+  const toggleFavorite = async (venueId: string) => {
+    if (!getAuthUser()) {
+      navigate(`/login?redirect=${encodeURIComponent('/venues')}`);
+      return;
+    }
+
+    const isSaved = favoriteVenueIds.includes(venueId);
+    setFavoriteVenueIds((current) => isSaved ? current.filter((id) => id !== venueId) : [...current, venueId]);
+    try {
+      const ids = isSaved ? await removeFavoriteVenue(venueId) : await addFavoriteVenue(venueId);
+      setFavoriteVenueIds(ids);
+    } catch (_error) {
+      setFavoriteVenueIds((current) => isSaved ? [...current, venueId] : current.filter((id) => id !== venueId));
+    }
   };
 
   return (
@@ -133,15 +236,27 @@ export default function VenueHome() {
             </div>
 
             <button type="submit" className="search-button">Search Venues</button>
+            {hasFilters && (
+              <button type="button" className="clear-filter-button" onClick={clearFilters}>Clear</button>
+            )}
           </form>
+          {filterError && <p className="filter-feedback error">{filterError}</p>}
+          {hasFilters && !filterError && (
+            <p className="filter-feedback">
+              Showing {visibleVenues.length} {visibleVenues.length === 1 ? 'venue' : 'venues'}
+              {activeFilters.location.trim() ? ` for "${activeFilters.location.trim()}"` : ''}
+              {activeFilters.checkInDate ? ` from ${activeFilters.checkInDate}` : ''}
+              {activeFilters.checkOutDate ? ` to ${activeFilters.checkOutDate}` : ''}.
+            </p>
+          )}
         </div>
 
         <div className="venue-hero-media">
           <img src={heroImage} alt="Modern glass venue at dusk" />
           <div className="recommendation-card">
             <span>Database Listings</span>
-            <strong>{isLoadingVenues ? 'Loading venues...' : `${venues.length} venues available`}</strong>
-            <p>{venueLoadError || 'Live venue records from the backend are shown below.'}</p>
+            <strong>{isLoadingVenues ? 'Loading venues...' : `${visibleVenues.length} venues available`}</strong>
+            <p>{venueLoadError || (hasFilters ? 'Filtered live venue records from the backend are shown below.' : 'Live venue records from the backend are shown below.')}</p>
           </div>
         </div>
       </section>
@@ -149,16 +264,16 @@ export default function VenueHome() {
       <section className="recent-section">
         <div className="section-title-row">
           <div>
-            <h2>Saved Venue Listings</h2>
-            <p>{isLoadingVenues ? 'Loading venues saved by owners.' : 'Live listings from the backend database.'}</p>
+            <h2>Venue Listings</h2>
+            <p>{isLoadingVenues ? 'Loading venues from owners.' : hasFilters ? 'Live listings matching your filters.' : 'Live listings from the backend database.'}</p>
           </div>
-          <Link to="/venues/search">Browse all saved venues</Link>
+          <Link to={searchPath}>Browse all venues</Link>
         </div>
-        {venues.length > 0 ? (
+        {visibleVenues.length > 0 ? (
           <div className="recent-grid">
-            {venues.map((venue) => (
+            {visibleVenues.map((venue) => (
             <Link to={`/venues/${venue.id}`} key={venue.id}>
-              <button aria-label={`Save ${venue.name}`}>Save</button>
+              <FavoriteButton isSaved={favoriteVenueIds.includes(venue.id)} label={venue.name} onToggle={() => toggleFavorite(venue.id)} />
               <VenueMedia venue={venue} />
               <p className="location">{venue.location}</p>
               <h3>{venue.name}</h3>
@@ -170,7 +285,7 @@ export default function VenueHome() {
             ))}
           </div>
         ) : (
-          <p className="empty-venues">{venueLoadError || 'No venues found in the backend database yet.'}</p>
+          <p className="empty-venues">{venueLoadError || (hasFilters ? 'No venues match those filters yet.' : 'No venues found in the backend database yet.')}</p>
         )}
       </section>
 
@@ -181,7 +296,7 @@ export default function VenueHome() {
               <h2>Recommended for You</h2>
               <p>Recommended from live venue records.</p>
             </div>
-            <Link to="/venues/search">View all recommendations</Link>
+            <Link to={searchPath}>View all recommendations</Link>
           </div>
 
           <div className="recommendation-grid">
@@ -210,6 +325,8 @@ export default function VenueHome() {
         </section>
       )}
 
+      <AiRecommendations venues={visibleVenues} />
+
       <section className="province-section">
         <h2>Explore by Province</h2>
         <div className="province-grid">
@@ -226,9 +343,9 @@ export default function VenueHome() {
       <section className="recent-section">
         <h2>Recently Added</h2>
         <div className="recent-grid">
-          {venues.slice(0, 3).map((venue) => (
+          {visibleVenues.slice(0, 3).map((venue) => (
             <Link to={`/venues/${venue.id}`} key={venue.id}>
-              <button aria-label={`Save ${venue.name}`}>Save</button>
+              <FavoriteButton isSaved={favoriteVenueIds.includes(venue.id)} label={venue.name} onToggle={() => toggleFavorite(venue.id)} />
               <VenueMedia venue={venue} />
               <p className="location">{venue.location}</p>
               <h3>{venue.name}</h3>
@@ -253,13 +370,13 @@ export default function VenueHome() {
       </section>
 
       <VenueFooter />
+      <VenueAssistant venues={visibleVenues.length > 0 ? visibleVenues : venues} />
     </main>
   );
 }
 
 export function VenueHeader() {
   const [showProfile, setShowProfile] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const user = getAuthUser();
 
@@ -267,14 +384,6 @@ export function VenueHeader() {
     clearAuthSession();
     setShowProfile(false);
     navigate('/login');
-  };
-
-  const handleSearchSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/venues/search?location=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery('');
-    }
   };
 
   return (
@@ -287,16 +396,9 @@ export function VenueHeader() {
         <Link to="/venues/search">Heritage</Link>
       </nav>
       <div className="header-actions">
-        <form className="header-search" onSubmit={handleSearchSubmit}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search venues..."
-            aria-label="Search venues"
-          />
-          <button type="submit" aria-label="Search">Search</button>
-        </form>
+        <Link to="/venues/search" className="header-search-icon" aria-label="Search venues">
+          <SearchIcon />
+        </Link>
         {user ? (
           <div className="profile-menu" style={{ position: 'relative' }}>
             <button
@@ -387,6 +489,15 @@ export function VenueHeader() {
         )}
       </div>
     </header>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M16 16l4 4" />
+    </svg>
   );
 }
 

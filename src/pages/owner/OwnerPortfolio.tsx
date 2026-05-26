@@ -1,45 +1,32 @@
 import { Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import type { Venue } from '../../data/venues';
-import { listMyVenues } from '../../services/venues';
+import { useState } from 'react';
 import { ProviderShell } from './ProviderShell';
+import { exportCsv, filterVenues, useOwnerData, useOwnerSearch, venueExportRows } from './ownerData';
 
 const fallbackImage =
   'https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=500';
 
 export default function OwnerPortfolio() {
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let isMounted = true;
-
-    listMyVenues()
-      .then((items) => {
-        if (isMounted) setVenues(items);
-      })
-      .catch((loadError) => {
-        if (isMounted) setError(loadError instanceof Error ? loadError.message : 'Unable to load your venues.');
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
+  const { venues, isLoading, error } = useOwnerData();
+  const { query, setQuery } = useOwnerSearch();
+  const [statusFilter, setStatusFilter] = useState('all');
   const activeCount = venues.filter((venue) => venue.status === 'approved' || venue.status === 'Approved').length;
   const pendingCount = venues.filter((venue) => venue.status === 'pending' || venue.status === 'Pending Approval').length;
+  const searchedVenues = filterVenues(venues, query);
+  const filteredVenues = searchedVenues.filter((venue) => {
+    const status = String(venue.status || '').toLowerCase();
+    if (statusFilter === 'active') return ['approved', 'active'].includes(status);
+    if (statusFilter === 'pending') return status.includes('pending');
+    if (statusFilter === 'archived') return status.includes('archived');
+    return true;
+  });
 
   return (
     <ProviderShell>
       <section className="portfolio-wrap">
         <div className="provider-toolbar">
-          <input placeholder="Search your venues..." />
-          <span>Filter</span>
+          <input placeholder="Search your venues..." value={query} onChange={(event) => setQuery(event.target.value)} />
+          <button type="button" onClick={() => exportCsv('owner-venues', venueExportRows(filteredVenues))}>Export CSV</button>
         </div>
 
         <div className="portfolio-heading">
@@ -52,10 +39,10 @@ export default function OwnerPortfolio() {
         </div>
 
         <nav className="portfolio-tabs">
-          <button className="active">All Venues ({venues.length})</button>
-          <button>Active Listings ({activeCount})</button>
-          <button>Pending Review ({pendingCount})</button>
-          <button>Archived (0)</button>
+          <button className={statusFilter === 'all' ? 'active' : ''} onClick={() => setStatusFilter('all')}>All Venues ({venues.length})</button>
+          <button className={statusFilter === 'active' ? 'active' : ''} onClick={() => setStatusFilter('active')}>Active Listings ({activeCount})</button>
+          <button className={statusFilter === 'pending' ? 'active' : ''} onClick={() => setStatusFilter('pending')}>Pending Review ({pendingCount})</button>
+          <button className={statusFilter === 'archived' ? 'active' : ''} onClick={() => setStatusFilter('archived')}>Archived (0)</button>
           <span>Sort by: <b>Most Recent</b></span>
         </nav>
 
@@ -63,7 +50,7 @@ export default function OwnerPortfolio() {
         {error && <p className="field-error centered">{error}</p>}
 
         <div className="portfolio-grid">
-          {venues.map((venue) => (
+          {filteredVenues.map((venue) => (
             <article className="property-card" key={venue.id}>
               <div className="property-preview">
                 <span className="online">{venue.status || 'Pending'}</span>
@@ -82,16 +69,16 @@ export default function OwnerPortfolio() {
             </article>
           ))}
 
-          {!isLoading && venues.length === 0 && !error && (
+          {!isLoading && filteredVenues.length === 0 && !error && (
             <article className="expand-card">
               <strong>New</strong>
-              <h2>No venues yet</h2>
-              <p>List a new luxury space and connect with premium event planners.</p>
+              <h2>{venues.length ? 'No matching venues' : 'No venues yet'}</h2>
+              <p>{venues.length ? 'Adjust search or filters to find another listing.' : 'List a new luxury space and connect with premium event planners.'}</p>
               <Link to="/owner/register">Start Listing</Link>
             </article>
           )}
 
-          {venues.length > 0 && (
+          {filteredVenues.length > 0 && (
             <article className="expand-card">
               <strong>New</strong>
               <h2>Expand Your Portfolio</h2>

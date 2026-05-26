@@ -1,10 +1,21 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { OwnerShell, MetricCard } from './OwnerShell';
-import { formatDate, formatRwf, labelStatus, statusClass, useOwnerData, useOwnerSummary } from './ownerData';
+import { bookingExportRows, exportCsv, filterBookings, formatDate, formatRwf, labelStatus, statusClass, useOwnerData, useOwnerSearch, useOwnerSummary } from './ownerData';
 
 export default function OwnerTransactions() {
   const { venues, bookings, isLoading, error } = useOwnerData();
-  const summary = useOwnerSummary(venues, bookings);
+  const { query } = useOwnerSearch();
+  const [statusFilter, setStatusFilter] = useState('all');
+  const searchedBookings = filterBookings(bookings, query);
+  const filteredBookings = searchedBookings.filter((booking) => {
+    const status = String(booking.paymentStatus || booking.status || '').toLowerCase();
+    if (statusFilter === 'completed') return status.includes('paid') || status.includes('confirm');
+    if (statusFilter === 'pending') return status.includes('pending') || status.includes('unpaid');
+    if (statusFilter === 'refunded') return status.includes('refund') || status.includes('cancel');
+    return true;
+  });
+  const summary = useOwnerSummary(venues, filteredBookings);
 
   return (
     <OwnerShell section="Transaction Log">
@@ -19,11 +30,19 @@ export default function OwnerTransactions() {
           <article className="create-invoice">+<strong>Create New Invoice</strong><span>Manual transaction entry</span></article>
         </div>
         <section className="transaction-table-card">
-          <div className="table-toolbar"><div><button className="active">All</button><button>Completed</button><button>Pending</button><button>Refunded</button></div><button>Export CSV</button></div>
+          <div className="table-toolbar">
+            <div>
+              <button className={statusFilter === 'all' ? 'active' : ''} onClick={() => setStatusFilter('all')}>All</button>
+              <button className={statusFilter === 'completed' ? 'active' : ''} onClick={() => setStatusFilter('completed')}>Completed</button>
+              <button className={statusFilter === 'pending' ? 'active' : ''} onClick={() => setStatusFilter('pending')}>Pending</button>
+              <button className={statusFilter === 'refunded' ? 'active' : ''} onClick={() => setStatusFilter('refunded')}>Refunded</button>
+            </div>
+            <button type="button" onClick={() => exportCsv('owner-transactions', bookingExportRows(filteredBookings))}>Export CSV</button>
+          </div>
           <table>
             <thead><tr><th>Invoice ID</th><th>Client Name</th><th>Date</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {bookings.map((booking) => (
+              {filteredBookings.map((booking) => (
                 <tr key={booking.id}>
                   <td><strong>{booking.confirmationNumber || booking.id}</strong><span>{booking.venueName}</span></td>
                   <td>{booking.customerName || booking.customerEmail || 'Customer'}</td>
@@ -33,8 +52,8 @@ export default function OwnerTransactions() {
                   <td><Link to={`/venues/${booking.venueId}/confirmed?bookingId=${encodeURIComponent(booking.id)}`}>View</Link></td>
                 </tr>
               ))}
-              {!isLoading && bookings.length === 0 && (
-                <tr><td colSpan={6}>No transaction history yet.</td></tr>
+              {!isLoading && filteredBookings.length === 0 && (
+                <tr><td colSpan={6}>{bookings.length ? 'No transactions match your current filters.' : 'No transaction history yet.'}</td></tr>
               )}
             </tbody>
           </table>

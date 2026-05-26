@@ -50,10 +50,13 @@ export type Booking = {
 export type Payment = {
   id: string;
   bookingId: string | null;
+  venueId?: string;
   amount: number;
   currency: string;
   method: string;
   status: string;
+  createdAt?: string;
+  paidAt?: string;
 };
 
 type AddonsResponse = {

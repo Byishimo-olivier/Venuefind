@@ -1,5 +1,7 @@
 import { NavLink, Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { getAuthUser } from '../../services/api';
+import { useOwnerSearch } from './ownerData';
 import '../venues/venues.css';
 
 const providerNav = [
@@ -11,13 +13,22 @@ const providerNav = [
   ['Payouts', '/owner/payouts', 'wallet'],
 ];
 
+function getInitials(name?: string) {
+  const parts = String(name || 'Owner').trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'O';
+}
+
 export function ProviderShell({ children, compact = false }: { children: ReactNode; compact?: boolean }) {
+  const user = getAuthUser();
+  const ownerName = user?.fullName || 'Venue Owner';
+  const { query, setQuery } = useOwnerSearch();
+
   return (
     <main className={`provider-page owner-console ${compact ? 'compact-provider' : ''}`}>
       <aside className="provider-side">
         <Link to="/owner" className="provider-logo">
-          <span>SE</span>
-          <strong>Smart Event Venue</strong>
+          <span>{getInitials(ownerName)}</span>
+          <strong>{ownerName}</strong>
           <small>Premium Provider</small>
         </Link>
 
@@ -42,11 +53,16 @@ export function ProviderShell({ children, compact = false }: { children: ReactNo
         <header className="provider-topbar">
           <label>
             <span>Provider Portal</span>
-            <input placeholder="Search venues, bookings, reviews..." />
+            <input
+              placeholder="Search venues, bookings, reviews..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
           </label>
           <div>
+            {query && <button type="button" onClick={() => setQuery('')}>Clear</button>}
             <Link to="/owner/register">New Listing</Link>
-            <span>DM</span>
+            <span title={ownerName}>{getInitials(ownerName)}</span>
           </div>
         </header>
         {children}

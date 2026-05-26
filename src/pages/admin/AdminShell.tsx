@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { getAuthUser } from '../../services/api';
 import './admin.css';
 
 const nav = [
@@ -14,6 +15,14 @@ const nav = [
 ];
 
 export function AdminShell({ children, mode = 'admin' }: { children: ReactNode; mode?: 'admin' | 'concierge' }) {
+  const user = getAuthUser();
+  const initials = (user?.fullName || 'System Admin')
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <main className={`admin-page admin-${mode}`}>
       <aside className="admin-sidebar">
@@ -24,10 +33,10 @@ export function AdminShell({ children, mode = 'admin' }: { children: ReactNode; 
         </Link>
 
         <div className="admin-profile">
-          <span />
+          <span>{initials}</span>
           <div>
-            <strong>System Admin</strong>
-            <small>Level 4 Access</small>
+            <strong>{user?.fullName || 'System Admin'}</strong>
+            <small>{user?.role === 'admin' ? 'Admin Access' : 'Command Access'}</small>
           </div>
         </div>
 
@@ -58,7 +67,7 @@ export function AdminShell({ children, mode = 'admin' }: { children: ReactNode; 
           <div className="admin-topbar-actions">
             <button type="button">Alerts</button>
             <button type="button">Audit Log</button>
-            <span>SA</span>
+            <span>{initials}</span>
           </div>
         </header>
         {children}

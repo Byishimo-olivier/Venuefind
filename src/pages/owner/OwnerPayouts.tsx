@@ -1,10 +1,12 @@
 import { OwnerShell } from './OwnerShell';
-import { formatRwf, labelStatus, statusClass, useOwnerData, useOwnerSummary } from './ownerData';
+import { bookingExportRows, exportCsv, filterBookings, formatRwf, labelStatus, statusClass, useOwnerData, useOwnerSearch, useOwnerSummary } from './ownerData';
 
 export default function OwnerPayouts() {
   const { venues, bookings, isLoading, error } = useOwnerData();
-  const summary = useOwnerSummary(venues, bookings);
-  const heldDeposits = bookings.reduce((total, booking) => total + Number(booking.totals?.depositDue || 0), 0);
+  const { query } = useOwnerSearch();
+  const filteredBookings = filterBookings(bookings, query);
+  const summary = useOwnerSummary(venues, filteredBookings);
+  const heldDeposits = filteredBookings.reduce((total, booking) => total + Number(booking.totals?.depositDue || 0), 0);
   const finalPayments = Math.max(summary.totalRevenue - heldDeposits, 0);
   const depositShare = summary.totalRevenue ? Math.round((heldDeposits / summary.totalRevenue) * 100) : 0;
   const finalShare = summary.totalRevenue ? Math.round((finalPayments / summary.totalRevenue) * 100) : 0;
@@ -31,11 +33,11 @@ export default function OwnerPayouts() {
         </div>
 
         <section className="transaction-table-card payout-ledger">
-          <div className="table-toolbar"><h2>Transaction Ledger</h2><div><button>Filter By Date</button><button>Export CSV</button></div></div>
+          <div className="table-toolbar"><h2>Transaction Ledger</h2><div><button type="button" onClick={() => exportCsv('owner-payouts', bookingExportRows(filteredBookings))}>Export CSV</button></div></div>
           <table>
             <thead><tr><th>Client / Event</th><th>Transaction ID</th><th>Type</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
             <tbody>
-              {bookings.map((booking) => (
+              {filteredBookings.map((booking) => (
                 <tr key={booking.id}>
                   <td><strong>{booking.venueName}</strong><span>Client: {booking.customerName || booking.customerEmail || 'Customer'}</span></td>
                   <td>{booking.confirmationNumber || booking.id}</td>
@@ -45,12 +47,12 @@ export default function OwnerPayouts() {
                   <td>View</td>
                 </tr>
               ))}
-              {!isLoading && bookings.length === 0 && (
-                <tr><td colSpan={6}>No payouts are available yet.</td></tr>
+              {!isLoading && filteredBookings.length === 0 && (
+                <tr><td colSpan={6}>{bookings.length ? 'No payouts match your current search.' : 'No payouts are available yet.'}</td></tr>
               )}
             </tbody>
           </table>
-          <button className="load-history">Load Full Transaction History</button>
+          <button className="load-history" type="button" onClick={() => exportCsv('owner-payout-history', bookingExportRows(bookings))}>Load Full Transaction History</button>
         </section>
 
         <section className="dispute-card">

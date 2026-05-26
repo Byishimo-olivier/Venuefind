@@ -5,6 +5,7 @@ import Verification from './pages/auth/Verification';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import VenueHome from './pages/venues/VenueHome';
+import VenueAllList from './pages/venues/VenueAllList';
 import VenueSearchMap from './pages/venues/VenueSearchMap';
 import VenueDetails from './pages/venues/VenueDetails';
 import VenueBooking from './pages/venues/VenueBooking';
@@ -41,6 +42,7 @@ function App() {
       <Routes>
         <Route path="/venue" element={<Navigate to="/venues" replace />} />
         <Route path="/venues" element={<VenueHome />} />
+        <Route path="/venues/all" element={<VenueAllList />} />
         <Route path="/venues/search" element={<VenueSearchMap />} />
         <Route path="/venues/:venueId" element={<VenueDetails />} />
         <Route path="/venues/:venueId/book" element={<VenueBooking />} />
