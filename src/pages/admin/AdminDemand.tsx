@@ -1,6 +1,6 @@
 import { AdminShell } from './AdminShell';
 import { useEffect, useState } from 'react';
-import { formatRwf, getAdminOverview, type AdminOverview } from '../../services/admin';
+import { getAdminOverview, type AdminOverview } from '../../services/admin';
 
 export default function AdminDemand() {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
@@ -31,7 +31,7 @@ export default function AdminDemand() {
   const sortedProvinces = overview?.provinceSummary?.sort((a, b) => b.revenue - a.revenue) || [];
   const totalDemand = overview?.summary?.totalBookings || 0;
   const confirmedDemand = overview?.summary?.confirmedBookings || 0;
-  const inquiryRate = Math.round((totalDemand / Math.max(overview?.summary?.totalUsers || 1, 1)) * 100);
+  
 
   return (
     <AdminShell mode="concierge">

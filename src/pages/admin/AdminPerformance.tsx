@@ -29,7 +29,7 @@ export default function AdminPerformance() {
   }, []);
 
   const avgResponseTime = overview?.topVenues?.length 
-    ? Math.round(overview.topVenues.reduce((sum, v) => sum + (Math.random() * 300 + 60), 0) / overview.topVenues.length)
+    ? Math.round(overview.topVenues.reduce((sum, _v) => sum + (Math.random() * 300 + 60), 0) / overview.topVenues.length)
     : 0;
   
   const avgRating = 4.7;
