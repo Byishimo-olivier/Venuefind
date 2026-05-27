@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Venue } from '../../data/venues';
@@ -193,7 +193,6 @@ export default function VenueHome() {
         <div className="venue-hero-copy">
           <p className="eyebrow">Smart Event Venue Discovery</p>
           <h1>Curating Rwanda's most prestigious locations for world-class gatherings.</h1>
-          <p>Experience database-backed venue recommendations tailored to your event.</p>
           <form className="venue-search" onSubmit={handleSearch}>
             <div className="search-field">
               <label htmlFor="location">Location</label>
@@ -377,8 +376,24 @@ export default function VenueHome() {
 
 export function VenueHeader() {
   const [showProfile, setShowProfile] = useState(false);
+  const [activeTab, setActiveTab] = useState('venues');
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getAuthUser();
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/venues/search')) {
+      // visiting the shared search route: keep the existing tab selection
+      // but ensure we don't leave `venues` active when on the search page
+      setActiveTab((current) => (current === 'venues' ? 'services' : current));
+    } else if (location.pathname.startsWith('/venues')) {
+      // any other /venues path (including /venues/:id) should treat Venues as active
+      setActiveTab('venues');
+    } else {
+      // non-venues routes — clear the active tab
+      setActiveTab('');
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     clearAuthSession();
@@ -390,10 +405,10 @@ export function VenueHeader() {
     <header className="venue-header">
       <Link to="/venues" className="venue-logo">Virunga Venues</Link>
       <nav>
-        <Link to="/venues" className="active">Venues</Link>
-        <Link to="/venues/search">Services</Link>
-        <Link to="/venues/search">Planning</Link>
-        <Link to="/venues/search">Heritage</Link>
+        <NavLink to="/venues" end className={({ isActive }) => (isActive ? 'active' : undefined)}>Venues</NavLink>
+        <Link to="/venues/search" className={activeTab === 'services' ? 'active' : ''} onClick={() => setActiveTab('services')}>Services</Link>
+        <Link to="/venues/search" className={activeTab === 'planning' ? 'active' : ''} onClick={() => setActiveTab('planning')}>Planning</Link>
+        <Link to="/venues/search" className={activeTab === 'heritage' ? 'active' : ''} onClick={() => setActiveTab('heritage')}>Heritage</Link>
       </nav>
       <div className="header-actions">
         <Link to="/venues/search" className="header-search-icon" aria-label="Search venues">
@@ -404,8 +419,8 @@ export function VenueHeader() {
             <button
               onClick={() => setShowProfile(!showProfile)}
               aria-label="User profile"
-              style={{
-                background: '#1a1a1a',
+                style={{
+                background: 'var(--color-primary)',
                 border: 'none',
                 cursor: 'pointer',
                 width: '36px',
@@ -413,7 +428,7 @@ export function VenueHeader() {
                 borderRadius: '50%',
                 fontSize: '0.9rem',
                 fontWeight: '600',
-                color: 'white',
+                color: 'var(--color-bg-cream)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -426,23 +441,25 @@ export function VenueHeader() {
                 position: 'absolute',
                 top: '100%',
                 right: 0,
-                backgroundColor: 'white',
-                border: '1px solid #ddd',
+                backgroundColor: 'var(--color-bg-cream)',
+                border: '1px solid var(--color-light-border)',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 minWidth: '200px',
                 zIndex: 1000,
                 marginTop: '8px',
               }}>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid #eee' }}>
-                  <p style={{ margin: '0 0 4px 0', fontSize: '0.9rem', color: '#666' }}>Logged in as</p>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-light-border)' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '0.9rem', color: 'rgba(45,45,45,0.65)' }}>Logged in as</p>
                   <p style={{ margin: '0', fontWeight: '600', fontSize: '0.95rem' }}>{user.fullName}</p>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#999' }}>{user.email}</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'rgba(45,45,45,0.55)' }}>{user.email}</p>
                 </div>
                 {user.role !== 'customer' && (
                   <>
-                    <Link to="/owner" onClick={() => setShowProfile(false)} style={{ display: 'block', padding: '10px 16px', color: '#333', textDecoration: 'none', fontSize: '0.9rem' }}>Dashboard</Link>
-                    <Link to="/owner/portfolio" onClick={() => setShowProfile(false)} style={{ display: 'block', padding: '10px 16px', color: '#333', textDecoration: 'none', fontSize: '0.9rem', borderTop: '1px solid #eee' }}>My Portfolio</Link>
+                    <Link to={user.role === 'admin' ? '/admin' : '/owner'} onClick={() => setShowProfile(false)} style={{ display: 'block', padding: '10px 16px', color: 'var(--color-text)', textDecoration: 'none', fontSize: '0.9rem' }}>Dashboard</Link>
+                    {user.role !== 'admin' && (
+                      <Link to="/owner/portfolio" onClick={() => setShowProfile(false)} style={{ display: 'block', padding: '10px 16px', color: 'var(--color-text)', textDecoration: 'none', fontSize: '0.9rem', borderTop: '1px solid var(--color-light-border)' }}>My Portfolio</Link>
+                    )}
                   </>
                 )}
                 <button
@@ -469,8 +486,8 @@ export function VenueHeader() {
           <Link
             to="/login"
             aria-label="Account"
-            style={{
-              background: '#f5f5f5',
+              style={{
+              background: 'var(--color-bg-cream)',
               border: 'none',
               cursor: 'pointer',
               width: '36px',
@@ -481,7 +498,7 @@ export function VenueHeader() {
               alignItems: 'center',
               justifyContent: 'center',
               textDecoration: 'none',
-              color: '#173c2e',
+              color: 'var(--color-primary)',
             }}
           >
             Login

@@ -2,8 +2,8 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(420px, 1.02fr) minmax(420px, 0.98fr);
-  background: #f6f7f8;
-  color: #102033;
+  background: var(--color-bg-beige);
+  color: var(--color-text);
   text-align: left;
 }
 
@@ -130,7 +130,7 @@
   border-radius: 999px;
   background: #fff;
   border: 1px solid #edf0f2;
-  color: #102033;
+  color: var(--color-primary);
   font-size: 13px;
   font-weight: 700;
   padding: 9px 16px;
@@ -142,7 +142,7 @@
   align-items: center;
   gap: 14px;
   margin-bottom: 42px;
-  color: #102033;
+  color: var(--color-primary);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 25px;
   font-weight: 700;
@@ -154,7 +154,7 @@
   height: 42px;
   place-items: center;
   border-radius: 5px;
-  background: #102033;
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -178,7 +178,7 @@
 
 .auth-heading h2 {
   margin: 0 0 12px;
-  color: #102033;
+  color: var(--color-primary);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(36px, 4vw, 46px);
   font-weight: 500;
@@ -228,7 +228,7 @@
 .auth-switch a,
 .support-links a,
 .auth-back-link {
-  color: #102033;
+  color: var(--color-primary);
   font-weight: 800;
   text-decoration: none;
 }
@@ -245,7 +245,7 @@ select {
   border: 1px solid #e3e6e9;
   border-radius: 8px;
   background: #e9ecef;
-  color: #102033;
+  color: var(--color-primary);
   font: inherit;
   font-size: 15px;
   outline: none;
@@ -260,7 +260,7 @@ input::placeholder {
 input:focus,
 select:focus {
   background: #fff;
-  border-color: #102033;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 4px rgba(16, 32, 51, 0.08);
 }
 
@@ -298,7 +298,7 @@ input.is-invalid {
 }
 
 .input-icon-button:hover {
-  color: #102033;
+  color: var(--color-primary);
 }
 
 .input-icon-button svg,
@@ -361,7 +361,7 @@ input.is-invalid {
 
 .primary-button {
   border: 0;
-  background: #102033;
+  background: var(--color-primary);
   color: #fff;
   box-shadow: 0 14px 24px rgba(16, 32, 51, 0.18);
   cursor: pointer;
@@ -381,7 +381,7 @@ input.is-invalid {
 .secondary-button {
   border: 1px solid #e1e4e8;
   background: #fff;
-  color: #102033;
+  color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -445,7 +445,7 @@ input.is-invalid {
 
 .auth-back-link {
   display: inline-flex;
-  color: #102033;
+  color: var(--color-primary);
   font-size: 13px;
   margin-bottom: 10px;
 }
@@ -525,7 +525,7 @@ input.is-invalid {
 
 .success-panel h3 {
   margin: 18px 0 8px;
-  color: #102033;
+  color: var(--color-primary);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 24px;
 }
@@ -538,7 +538,7 @@ input.is-invalid {
   margin-top: 18px;
   border: 0;
   background: transparent;
-  color: #102033;
+  color: var(--color-primary);
   font-weight: 800;
   cursor: pointer;
 }
@@ -577,7 +577,7 @@ input.is-invalid {
   height: 30px;
   place-items: center;
   border-radius: 9px;
-  background: #102033;
+  background: var(--color-primary);
   color: #fff;
   font-size: 13px;
   font-weight: 800;
@@ -590,7 +590,7 @@ input.is-invalid {
 
 .step-title h3 {
   margin: 0;
-  color: #102033;
+  color: var(--color-primary);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 22px;
   font-weight: 500;
@@ -604,14 +604,14 @@ input.is-invalid {
   border: 1px solid transparent;
   border-radius: 8px;
   background: #f1f2f4;
-  color: #102033;
+  color: var(--color-primary);
   cursor: pointer;
   padding: 22px;
   text-align: left;
 }
 
 .method-card.active {
-  border: 2px solid #102033;
+  border: 2px solid var(--color-primary);
   background: #fff;
 }
 
@@ -622,7 +622,7 @@ input.is-invalid {
   height: 36px;
   place-items: center;
   border-radius: 5px;
-  background: #102033;
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -639,7 +639,7 @@ input.is-invalid {
 
 .method-card small {
   margin-bottom: 5px;
-  color: #102033;
+  color: var(--color-primary);
   font-size: 10px;
   font-style: normal;
   font-weight: 900;
@@ -672,7 +672,7 @@ input.is-invalid {
   border: 1px solid rgba(16, 32, 51, 0.12);
   border-radius: 6px;
   background: #fff;
-  color: #102033;
+  color: var(--color-primary);
   padding: 14px;
   text-align: center;
 }
@@ -719,7 +719,7 @@ input.is-invalid {
   margin: 2px auto 0;
   border: 0;
   background: transparent;
-  color: #102033;
+  color: var(--color-primary);
   font: inherit;
   font-weight: 800;
   cursor: pointer;
