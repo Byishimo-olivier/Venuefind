@@ -49,25 +49,39 @@ export default function OwnerPortfolio() {
         {isLoading && <p>Loading your venues...</p>}
         {error && <p className="field-error centered">{error}</p>}
 
-        <div className="portfolio-grid">
-          {filteredVenues.map((venue) => (
-            <article className="property-card" key={venue.id}>
-              <div className="property-preview">
-                <span className="online">{venue.status || 'Pending'}</span>
-                <img src={venue.heroImage || fallbackImage} alt="" />
-              </div>
-              <h2>{venue.name}<b>{venue.rating || 'New'}</b></h2>
-              <p>{venue.location}</p>
-              <div>
-                <span>Base Price<strong>{venue.price}</strong></span>
-                <span>Capacity<strong>{venue.capacity}</strong></span>
-              </div>
-              <footer>
-                <span>{venue.category}</span>
-                <Link to={`/venues/${venue.id}`}>View Listing</Link>
-              </footer>
-            </article>
-          ))}
+        <div className="owner-listing-table-wrap">
+          <table className="owner-listing-table">
+            <thead>
+              <tr>
+                <th>Listing</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Capacity</th>
+                <th>Rate</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredVenues.map((venue) => (
+                <tr key={venue.id}>
+                  <td>
+                    <div className="owner-listing-cell">
+                      <img src={venue.heroImage || fallbackImage} alt="" />
+                      <div>
+                        <strong>{venue.name}</strong>
+                        <span>{venue.category}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{venue.location}</td>
+                  <td><span className={`owner-status-pill ${String(venue.status || 'pending').toLowerCase().replace(/\s+/g, '-')}`}>{venue.status || 'Pending'}</span></td>
+                  <td>{venue.capacity}</td>
+                  <td>{venue.rating || 'New'}</td>
+                  <td><Link to={`/venues/${venue.id}`}>Open</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
           {!isLoading && filteredVenues.length === 0 && !error && (
             <article className="expand-card">

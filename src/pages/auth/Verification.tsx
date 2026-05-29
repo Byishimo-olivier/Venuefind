@@ -8,17 +8,35 @@ const verificationImage =
   'https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=1200&q=85';
 const inboxNotice = 'If you do not see it in your inbox, check your Spam or Junk folder.';
 
+function getStoredVerificationStatus() {
+  try {
+    const stored = window.sessionStorage.getItem('verification-email-status');
+    return stored ? JSON.parse(stored) as {
+      emailError?: string;
+      emailSent?: boolean;
+      message?: string;
+      verificationCode?: string;
+    } : {};
+  } catch {
+    return {};
+  }
+}
+
 export default function Verification() {
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
   const user = getAuthUser();
+  const initialEmailStatus = getStoredVerificationStatus();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [errors, setErrors] = useState<string>('');
   const [notice, setNotice] = useState(
-    user?.email
+    initialEmailStatus.message
+      ? `${initialEmailStatus.message}${initialEmailStatus.emailError ? ` (${initialEmailStatus.emailError})` : ''}`
+      : user?.email
       ? `Check ${user.email} for the verification code. ${inboxNotice}`
       : `Check your email for the verification code. ${inboxNotice}`
   );
+  const [devCode, setDevCode] = useState(initialEmailStatus.verificationCode || '');
   const navigate = useNavigate();
 
   const handleCodeChange = (index: number, value: string) => {
@@ -46,6 +64,7 @@ export default function Verification() {
     setIsSubmitting(true);
     try {
       await verifyAccount(code, 'authenticator');
+      window.sessionStorage.removeItem('verification-email-status');
       setIsSubmitting(false);
       navigate('/venues');
     } catch (error) {
@@ -59,7 +78,10 @@ export default function Verification() {
     setIsResending(true);
     try {
       const result = await resendVerificationCode();
-      setNotice(result.emailSent && user?.email ? `A new code was sent to ${user.email}. ${inboxNotice}` : result.message || `A new code was generated. ${inboxNotice}`);
+      setDevCode(result.verificationCode || '');
+      setNotice(result.emailSent && user?.email
+        ? `A new code was sent to ${user.email}. ${inboxNotice}`
+        : `${result.message || `A new code was generated. ${inboxNotice}`}${result.emailError ? ` (${result.emailError})` : ''}`);
     } catch (error) {
       setErrors(error instanceof Error ? error.message : 'Unable to resend verification code.');
     } finally {
@@ -143,6 +165,11 @@ export default function Verification() {
               ))}
             </div>
             {errors && <p className="field-error centered">{errors}</p>}
+            {devCode && (
+              <p className="field-error centered">
+                Email delivery failed in development. Use this code: <strong>{devCode}</strong>
+              </p>
+            )}
             <p>
               Haven't received the code?
               <button type="button" onClick={handleResend} disabled={isResending}>

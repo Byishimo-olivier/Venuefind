@@ -71,6 +71,8 @@ export default function VenueBooking() {
   const [duration, setDuration] = useState('6 Hours');
   const [guestCount, setGuestCount] = useState('150');
   const [error, setError] = useState('');
+  const [suggestedVenues, setSuggestedVenues] = useState<Array<{ id: string; name: string; location: string; province: string; category: string; price: string; heroImage?: string; capacity?: string }>>([]);
+  const [showConflictModal, setShowConflictModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const visibleMonthKey = toMonthKey(visibleMonth);
 
@@ -151,6 +153,8 @@ export default function VenueBooking() {
 
   const handleSubmit = async () => {
     setError('');
+    setSuggestedVenues([]);
+    setShowConflictModal(false);
 
     if (!getAuthToken()) {
       navigate(`/login?redirect=/venues/${venueId}/book`);
@@ -170,7 +174,14 @@ export default function VenueBooking() {
 
       navigate(`/venues/${venueId}/checkout?bookingId=${encodeURIComponent(booking.id)}`);
     } catch (bookingError) {
-      setError(bookingError instanceof Error ? bookingError.message : 'Could not create booking.');
+      const details = bookingError instanceof Error && 'details' in bookingError
+        ? (bookingError as Error & { details?: { suggestions?: Array<{ id: string; name: string; location: string; province: string; category: string; price: string; heroImage?: string; capacity?: string }> } }).details
+        : undefined;
+
+      const nextError = bookingError instanceof Error ? bookingError.message : 'Could not create booking.';
+      setError(nextError);
+      setSuggestedVenues(details?.suggestions || []);
+      setShowConflictModal(/already booked/i.test(nextError));
     } finally {
       setIsSubmitting(false);
     }
@@ -298,6 +309,26 @@ export default function VenueBooking() {
             </button>
             {error && <em>{error}</em>}
             <em>You won't be charged until the final step.</em>
+
+            {showConflictModal && suggestedVenues.length > 0 && (
+              <div className="booking-conflict-backdrop" onClick={() => setShowConflictModal(false)}>
+                <aside className="booking-conflict-modal" onClick={(event) => event.stopPropagation()}>
+                  <button type="button" className="booking-conflict-close" onClick={() => setShowConflictModal(false)} aria-label="Close">×</button>
+                  <p className="eyebrow">Availability update</p>
+                  <h3>This venue is already booked for the selected date and time.</h3>
+                  <p className="booking-conflict-copy">Here are similar venues you can try instead. You won't be charged until the final step.</p>
+                  <div className="booking-conflict-list">
+                    {suggestedVenues.map((suggestion) => (
+                      <Link key={suggestion.id} to={`/venues/${suggestion.id}/book`} className="booking-conflict-card" onClick={() => setShowConflictModal(false)}>
+                        <strong>{suggestion.name}</strong>
+                        <span>{suggestion.location} · {suggestion.province}</span>
+                        <small>{suggestion.category} · {suggestion.capacity} · {suggestion.price}</small>
+                      </Link>
+                    ))}
+                  </div>
+                </aside>
+              </div>
+            )}
           </aside>
         </div>
       </section>

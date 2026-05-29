@@ -19,13 +19,7 @@ function parseNumber(value: string) {
 }
 
 function venueMatchesSearch(venue: Venue, search: string) {
-  const terms = search
-    .toLowerCase()
-    .split(/[\s,]+/)
-    .map((term) => term.trim())
-    .filter(Boolean)
-    .filter((term) => term !== 'rwanda');
-
+  const terms = search.toLowerCase().split(/[\s,]+/).map((term) => term.trim()).filter(Boolean).filter((term) => term !== 'rwanda');
   if (!terms.length) return true;
 
   const text = [
@@ -52,28 +46,17 @@ function getPreviewMedia(venue: Venue) {
   const galleryMedia = Array.isArray(venue.galleryMedia) ? venue.galleryMedia.filter((item) => item?.url) : [];
   const galleryImage = Array.isArray(venue.galleryImages) ? venue.galleryImages.find(Boolean) : '';
 
-  if (galleryMedia.length > 0) {
-    return galleryMedia[0];
-  }
-
-  if (galleryImage) {
-    return { url: galleryImage, type: 'image' as const };
-  }
-
+  if (galleryMedia.length > 0) return galleryMedia[0];
+  if (galleryImage) return { url: galleryImage, type: 'image' as const };
   return { url: venue.heroImage, type: venue.heroMediaType || 'image' as const };
 }
 
 function VenuePreview({ venue }: { venue: Venue }) {
   const media = getPreviewMedia(venue);
-
-  if (media.type === 'video') {
-    return <video src={media.url} muted autoPlay loop playsInline />;
-  }
-
-  return <img src={media.url} alt="" />;
+  return media.type === 'video' ? <video src={media.url} muted autoPlay loop playsInline /> : <img src={media.url} alt="" />;
 }
 
-export default function VenueAllList() {
+export default function VenuePlanning() {
   const [searchParams] = useSearchParams();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [favoriteVenueIds, setFavoriteVenueIds] = useState<string[]>([]);
@@ -140,7 +123,7 @@ export default function VenueAllList() {
 
   const toggleFavorite = async (venueId: string) => {
     if (!getAuthUser()) {
-      navigate(`/login?redirect=${encodeURIComponent('/venues/all')}`);
+      navigate(`/login?redirect=${encodeURIComponent('/venues/planning')}`);
       return;
     }
 
@@ -157,14 +140,23 @@ export default function VenueAllList() {
   return (
     <main className="venues-page">
       <VenueHeader />
-      <section className="all-venues-wrap">
+      <section className="planning-hero">
+        <div>
+          <p className="eyebrow">Customer Planning</p>
+          <h1>Plan with every verified venue in one place.</h1>
+          <p>Compare capacity, setting, province, and price before moving into booking details.</p>
+        </div>
+        <Link to="/venues/search">Open Map View</Link>
+      </section>
+
+      <section className="all-venues-wrap planning-listing">
         <div className="all-venues-heading">
           <div>
-            <p className="eyebrow">Customer Venue Directory</p>
-            <h1>Browse all venues</h1>
-            <p>{isLoading ? 'Loading live venues from the backend.' : `${visibleVenues.length} of ${venues.length} venues available.`}</p>
+            <p className="eyebrow">Venue Shortlist</p>
+            <h1>All customer venues</h1>
+            <p>{isLoading ? 'Loading live venues from the backend.' : `${visibleVenues.length} of ${venues.length} venues ready for planning.`}</p>
           </div>
-          <Link to="/venues/search">View Map</Link>
+          <Link to="/venues/heritage">Heritage Venues</Link>
         </div>
 
         <div className="all-venue-filters">

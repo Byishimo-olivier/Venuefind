@@ -24,8 +24,14 @@ export async function getVenue(id: string) {
   return result.venue;
 }
 
-export async function listVenues() {
-  const result = await apiRequest<VenuesResponse>('/api/venues');
+export async function listVenues(options: { limit?: number; skip?: number } = {}) {
+  const params = new URLSearchParams();
+
+  if (options.limit) params.set('limit', String(options.limit));
+  if (options.skip) params.set('skip', String(options.skip));
+
+  const query = params.toString();
+  const result = await apiRequest<VenuesResponse>(`/api/venues${query ? `?${query}` : ''}`);
   return result.venues;
 }
 

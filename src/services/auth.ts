@@ -4,7 +4,9 @@ type AuthResponse = {
   token: string;
   user: AuthUser;
   emailSent?: boolean;
+  emailError?: string;
   message?: string;
+  verificationCode?: string;
 };
 
 type ResetResponse = {
@@ -92,7 +94,7 @@ export async function verifyAccount(code: string, method: 'authenticator' | 'sms
 }
 
 export async function resendVerificationCode() {
-  const result = await apiRequest<{ user: AuthUser; emailSent?: boolean; message?: string }>('/api/auth/verification-code', {
+  const result = await apiRequest<{ user: AuthUser; emailSent?: boolean; emailError?: string; message?: string; verificationCode?: string }>('/api/auth/verification-code', {
     method: 'POST',
     auth: true,
   });

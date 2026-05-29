@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Venue } from '../../data/venues';
 import { clearAuthSession, getAuthUser } from '../../services/api';
@@ -32,12 +32,29 @@ const emptyHomeFilters: HomeFilters = {
   checkOutDate: '',
 };
 
+function getPreviewMedia(venue: Venue) {
+  const galleryMedia = Array.isArray(venue.galleryMedia) ? venue.galleryMedia.filter((item) => item?.url) : [];
+  const galleryImage = Array.isArray(venue.galleryImages) ? venue.galleryImages.find(Boolean) : '';
+
+  if (galleryMedia.length > 0) {
+    return galleryMedia[0];
+  }
+
+  if (galleryImage) {
+    return { url: galleryImage, type: 'image' as const };
+  }
+
+  return { url: venue.heroImage, type: venue.heroMediaType || 'image' as const };
+}
+
 function VenueMedia({ venue }: { venue: Venue }) {
-  return venue.heroMediaType === 'video' ? (
-    <video src={venue.heroImage} muted autoPlay loop playsInline />
-  ) : (
-    <img src={venue.heroImage} alt="" />
-  );
+  const media = getPreviewMedia(venue);
+
+  if (media.type === 'video') {
+    return <video src={media.url} muted autoPlay loop playsInline preload="metadata" />;
+  }
+
+  return <img src={media.url} alt="" loading="lazy" decoding="async" />;
 }
 
 function getInitials(fullName: string): string {
@@ -83,7 +100,7 @@ function getSearchPath(filters: HomeFilters) {
   if (filters.checkInDate) params.set('checkIn', filters.checkInDate);
   if (filters.checkOutDate) params.set('checkOut', filters.checkOutDate);
   const query = params.toString();
-  return `/venues/all${query ? `?${query}` : ''}`;
+  return `/venues/planning${query ? `?${query}` : ''}`;
 }
 
 export default function VenueHome() {
@@ -101,7 +118,7 @@ export default function VenueHome() {
   useEffect(() => {
     let isMounted = true;
 
-    listVenues()
+    listVenues({ limit: 12 })
       .then((items) => {
         if (!isMounted) return;
         setVenues(items);
@@ -137,18 +154,24 @@ export default function VenueHome() {
   }, []);
 
   const hasFilters = hasActiveHomeFilters(activeFilters);
-  const visibleVenues = venues.filter((venue) => venueMatchesLocation(venue, activeFilters.location));
-  const featuredVenue = visibleVenues[0];
-  const stackedVenues = visibleVenues.slice(1, 3);
-  const searchPath = getSearchPath(activeFilters);
-  const provinceCards = Object.entries(provinceImages).map(([name, image]) => {
-    const count = visibleVenues.filter((venue) => venue.province === name).length;
-    return {
-      name,
-      image,
-      count: `${count} ${count === 1 ? 'venue' : 'venues'}`,
-    };
-  });
+  const visibleVenues = useMemo(
+    () => venues.filter((venue) => venueMatchesLocation(venue, activeFilters.location)),
+    [activeFilters.location, venues],
+  );
+  const featuredVenue = useMemo(() => visibleVenues[0], [visibleVenues]);
+  const stackedVenues = useMemo(() => visibleVenues.slice(1, 3), [visibleVenues]);
+  const searchPath = useMemo(() => getSearchPath(activeFilters), [activeFilters]);
+  const provinceCards = useMemo(
+    () => Object.entries(provinceImages).map(([name, image]) => {
+      const count = visibleVenues.filter((venue) => venue.province === name).length;
+      return {
+        name,
+        image,
+        count: `${count} ${count === 1 ? 'venue' : 'venues'}`,
+      };
+    }),
+    [visibleVenues],
+  );
 
   const handleSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -253,7 +276,7 @@ export default function VenueHome() {
         <div className="venue-hero-media">
           <img src={heroImage} alt="Modern glass venue at dusk" />
           <div className="recommendation-card">
-            <span>Database Listings</span>
+            <span>Recommendation</span>
             <strong>{isLoadingVenues ? 'Loading venues...' : `${visibleVenues.length} venues available`}</strong>
             <p>{venueLoadError || (hasFilters ? 'Filtered live venue records from the backend are shown below.' : 'Live venue records from the backend are shown below.')}</p>
           </div>
@@ -264,7 +287,7 @@ export default function VenueHome() {
         <div className="section-title-row">
           <div>
             <h2>Venue Listings</h2>
-            <p>{isLoadingVenues ? 'Loading venues from owners.' : hasFilters ? 'Live listings matching your filters.' : 'Live listings from the backend database.'}</p>
+            <p>{isLoadingVenues ? 'Loading venues from owners.' : hasFilters ? 'Live listings matching your filters.' : 'Live listings from the Smart Venue Platform.'}</p>
           </div>
           <Link to={searchPath}>Browse all venues</Link>
         </div>
@@ -385,7 +408,11 @@ export function VenueHeader() {
     if (location.pathname.startsWith('/venues/search')) {
       // visiting the shared search route: keep the existing tab selection
       // but ensure we don't leave `venues` active when on the search page
-      setActiveTab((current) => (current === 'venues' ? 'services' : current));
+      setActiveTab('services');
+    } else if (location.pathname.startsWith('/venues/planning') || location.pathname.startsWith('/venues/all')) {
+      setActiveTab('planning');
+    } else if (location.pathname.startsWith('/venues/heritage')) {
+      setActiveTab('heritage');
     } else if (location.pathname.startsWith('/venues')) {
       // any other /venues path (including /venues/:id) should treat Venues as active
       setActiveTab('venues');
@@ -407,8 +434,8 @@ export function VenueHeader() {
       <nav>
         <NavLink to="/venues" end className={({ isActive }) => (isActive ? 'active' : undefined)}>Venues</NavLink>
         <Link to="/venues/search" className={activeTab === 'services' ? 'active' : ''} onClick={() => setActiveTab('services')}>Services</Link>
-        <Link to="/venues/search" className={activeTab === 'planning' ? 'active' : ''} onClick={() => setActiveTab('planning')}>Planning</Link>
-        <Link to="/venues/search" className={activeTab === 'heritage' ? 'active' : ''} onClick={() => setActiveTab('heritage')}>Heritage</Link>
+        <Link to="/venues/planning" className={activeTab === 'planning' ? 'active' : ''} onClick={() => setActiveTab('planning')}>Planning</Link>
+        <Link to="/venues/heritage" className={activeTab === 'heritage' ? 'active' : ''} onClick={() => setActiveTab('heritage')}>Heritage</Link>
       </nav>
       <div className="header-actions">
         <Link to="/venues/search" className="header-search-icon" aria-label="Search venues">
@@ -530,7 +557,7 @@ export function VenueFooter() {
           <h3>Discovery</h3>
           <Link to="/venues/search">Featured Venues</Link>
           <Link to="/venues">Explore Provinces</Link>
-          <Link to="/venues/search">Heritage Sites</Link>
+          <Link to="/venues/heritage">Heritage Sites</Link>
           <Link to="/venues/search">Retreat Centers</Link>
         </div>
         <div>

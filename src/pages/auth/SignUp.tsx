@@ -49,7 +49,13 @@ export default function SignUp() {
     if (validate()) {
       setIsSubmitting(true);
       try {
-        await register({ fullName, email, phone: `+250${phone.replace(/\D/g, '')}`, password, role });
+        const result = await register({ fullName, email, phone: `+250${phone.replace(/\D/g, '')}`, password, role });
+        window.sessionStorage.setItem('verification-email-status', JSON.stringify({
+          emailError: result.emailError,
+          emailSent: result.emailSent,
+          message: result.message,
+          verificationCode: result.verificationCode,
+        }));
         navigate('/verification');
       } catch (error) {
         setServerMessage(error instanceof Error ? error.message : 'Unable to create your account.');

@@ -1,6 +1,7 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { getAuthUser } from '../../services/api';
+import { clearAuthSession, getAuthUser } from '../../services/api';
 import { useOwnerSearch } from './ownerData';
 import '../venues/venues.css';
 
@@ -22,6 +23,14 @@ export function ProviderShell({ children, compact = false }: { children: ReactNo
   const user = getAuthUser();
   const ownerName = user?.fullName || 'Venue Owner';
   const { query, setQuery } = useOwnerSearch();
+  const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const handleLogout = () => {
+    clearAuthSession();
+    setProfileOpen(false);
+    navigate('/login');
+  };
 
   return (
     <main className={`provider-page owner-console ${compact ? 'compact-provider' : ''}`}>
@@ -62,7 +71,30 @@ export function ProviderShell({ children, compact = false }: { children: ReactNo
           <div>
             {query && <button type="button" onClick={() => setQuery('')}>Clear</button>}
             <Link to="/owner/register">New Listing</Link>
-            <span title={ownerName}>{getInitials(ownerName)}</span>
+            <div className="owner-profile-menu">
+              <button
+                type="button"
+                className="owner-profile-trigger"
+                aria-expanded={profileOpen}
+                aria-label="Open provider profile menu"
+                onClick={() => setProfileOpen((current) => !current)}
+              >
+                {getInitials(ownerName)}
+              </button>
+              {profileOpen && (
+                <div className="owner-profile-dropdown">
+                  <div>
+                    <span>Signed in as</span>
+                    <strong>{ownerName}</strong>
+                    <small>{user?.email || 'No email available'}</small>
+                  </div>
+                  <Link to="/owner/portfolio" onClick={() => setProfileOpen(false)}>My Listings</Link>
+                  <Link to="/owner/register" onClick={() => setProfileOpen(false)}>Add Venue</Link>
+                  <Link to="/venues" onClick={() => setProfileOpen(false)}>Customer Site</Link>
+                  <button type="button" onClick={handleLogout}>Logout</button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         {children}

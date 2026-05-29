@@ -1,6 +1,21 @@
 import { Link } from 'react-router-dom';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '../../components/ui/chart';
 import { OwnerShell, MetricCard } from './OwnerShell';
 import { bookingExportRows, exportCsv, filterBookings, filterVenues, formatRwf, useOwnerData, useOwnerSearch, useOwnerSummary, venueExportRows } from './ownerData';
+
+type MonthlyBookingData = {
+  month: string;
+  bookings: number;
+  revenue: number;
+};
+
+const demandChartConfig = {
+  bookings: {
+    label: 'Bookings',
+    color: 'var(--chart-1)',
+  },
+} satisfies ChartConfig;
 
 export default function OwnerDashboard() {
   const { venues, bookings, isLoading, error } = useOwnerData();
@@ -8,6 +23,7 @@ export default function OwnerDashboard() {
   const filteredVenues = filterVenues(venues, query);
   const filteredBookings = filterBookings(bookings, query);
   const summary = useOwnerSummary(filteredVenues, filteredBookings);
+  const monthlyBookingData = buildMonthlyBookingData(filteredBookings);
 
   return (
     <OwnerShell>
@@ -36,20 +52,10 @@ export default function OwnerDashboard() {
         </div>
 
         <div className="forecast-grid">
-          <section className="forecast-card">
-            <div className="card-title"><h2>Venue Demand Forecasting</h2><p>Booking volume by month from live reservations.</p></div>
-            <div className="chart-bars">
-              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, index) => {
-                const monthBookings = filteredBookings.filter((booking) => new Date(`${booking.date}T00:00:00`).getMonth() === index).length;
-                const height = Math.max(35, 55 + monthBookings * 22);
-                return (
-                  <div key={month}>
-                    <span style={{ height: `${Math.max(28, height - 20)}px` }} />
-                    <b style={{ height: `${height}px` }} />
-                    <em>{month}</em>
-                  </div>
-                );
-              })}
+          <section className="forecast-card owner-chart-card">
+            <div className="card-title"><h2>Venue Demand Forecasting</h2><p>Booking volume and revenue by month from live reservations.</p></div>
+            <div className="owner-chart-wrap">
+              <DemandChart data={monthlyBookingData} />
             </div>
           </section>
           <aside className="top-venues-card">
@@ -86,5 +92,45 @@ export default function OwnerDashboard() {
         </section>
       </section>
     </OwnerShell>
+  );
+}
+
+function buildMonthlyBookingData(bookings: ReturnType<typeof filterBookings>): MonthlyBookingData[] {
+  const validDates = bookings
+    .map((booking) => new Date(`${booking.date}T00:00:00`))
+    .filter((date) => !Number.isNaN(date.getTime()));
+  const endDate = validDates.length
+    ? new Date(Math.max(...validDates.map((date) => date.getTime())))
+    : new Date();
+  const monthStarts = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(endDate.getFullYear(), endDate.getMonth() - (5 - index), 1);
+    return date;
+  });
+
+  return monthStarts.map((date) => {
+    const monthBookings = bookings.filter((booking) => {
+      const bookingDate = new Date(`${booking.date}T00:00:00`);
+      return bookingDate.getFullYear() === date.getFullYear() && bookingDate.getMonth() === date.getMonth();
+    });
+
+    return {
+      month: date.toLocaleString('en-US', { month: 'short' }),
+      bookings: monthBookings.length,
+      revenue: monthBookings.reduce((total, booking) => total + Number(booking.totals?.total || 0), 0),
+    };
+  });
+}
+
+function DemandChart({ data }: { data: MonthlyBookingData[] }) {
+  return (
+    <ChartContainer config={demandChartConfig} className="owner-recharts">
+      <BarChart accessibilityLayer data={data} margin={{ top: 10, right: 8, left: -10, bottom: 0 }}>
+        <CartesianGrid stroke="#eef1f5" vertical={false} />
+        <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} tick={{ fontSize: 12, fill: '#5b6b80' }} />
+        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#5b6b80' }} />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Bar dataKey="bookings" fill="var(--color-bookings)" radius={6} />
+      </BarChart>
+    </ChartContainer>
   );
 }

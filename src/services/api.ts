@@ -16,6 +16,18 @@ type RequestOptions = RequestInit & {
   auth?: boolean;
 };
 
+export class ApiError extends Error {
+  status: number;
+  details?: unknown;
+
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
 export function getAuthToken() {
   return window.localStorage.getItem(tokenKey);
 }
@@ -57,7 +69,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    throw new Error(data?.error?.message || 'Request failed. Please try again.');
+    const message = data?.error?.message || 'Request failed. Please try again.';
+    const error = new Error(message) as Error & { details?: unknown };
+    error.details = data?.error?.details;
+    throw error;
   }
 
   return data as T;

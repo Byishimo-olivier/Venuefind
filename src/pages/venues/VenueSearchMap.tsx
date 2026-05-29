@@ -73,7 +73,7 @@ export default function VenueSearchMap() {
   useEffect(() => {
     let isMounted = true;
 
-    listVenues()
+    listVenues({ limit: 100 })
       .then((items) => {
         if (!isMounted) return;
         setVenues(items);
