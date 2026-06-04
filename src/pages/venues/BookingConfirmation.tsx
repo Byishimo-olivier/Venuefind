@@ -2,6 +2,8 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { cancelBooking, getBooking } from '../../services/bookings';
 import type { Booking } from '../../services/bookings';
+import { downloadPdfReceipt } from '../../utils/pdfReceipt';
+import { PaymentComponent } from '../../components/PaymentComponent';
 import './venues.css';
 
 function formatDate(value: string) {
@@ -12,12 +14,146 @@ function formatTimeRange(startTime: string, durationHours: number) {
   return `${startTime} - ${durationHours} hours`;
 }
 
+function formatRwf(value = 0) {
+  return `RWF ${Math.round(value).toLocaleString('en-US')}`;
+}
+
+function parseEventDateTime(date: string, time: string, durationHours: number) {
+  const match = String(time || '').match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  let hours = 9;
+  let minutes = 0;
+
+  if (match) {
+    hours = Number(match[1]);
+    minutes = Number(match[2]);
+    const period = match[3].toUpperCase();
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+  }
+
+  const start = new Date(`${date}T00:00:00`);
+  start.setHours(hours, minutes, 0, 0);
+  const end = new Date(start);
+  end.setHours(end.getHours() + Number(durationHours || 1));
+  return { start, end };
+}
+
+function toCalendarDate(value: Date) {
+  return value.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+function getCalendarDetails(booking: Booking) {
+  const { start, end } = parseEventDateTime(booking.date, booking.startTime, booking.durationHours);
+  const title = `Reservation at ${booking.venueName}`;
+  const details = [
+    `Confirmation: ${booking.confirmationNumber}`,
+    `Guests: ${booking.guestCount}`,
+    `Status: ${booking.status.replace(/_/g, ' ')}`,
+  ].join('\n');
+
+  return {
+    details,
+    end,
+    location: booking.venueLocation,
+    start,
+    title,
+  };
+}
+
+function getGoogleCalendarUrl(booking: Booking) {
+  const event = getCalendarDetails(booking);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    dates: `${toCalendarDate(event.start)}/${toCalendarDate(event.end)}`,
+    details: event.details,
+    location: event.location,
+    text: event.title,
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function getOutlookCalendarUrl(booking: Booking) {
+  const event = getCalendarDetails(booking);
+  const params = new URLSearchParams({
+    body: event.details,
+    enddt: event.end.toISOString(),
+    location: event.location,
+    path: '/calendar/action/compose',
+    rru: 'addevent',
+    startdt: event.start.toISOString(),
+    subject: event.title,
+  });
+
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
+}
+
+function downloadIcs(booking: Booking) {
+  const event = getCalendarDetails(booking);
+  const escapeIcs = (value: string) => value.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Virunga Venues//Booking Calendar//EN',
+    'BEGIN:VEVENT',
+    `UID:${booking.id}@virungavenues`,
+    `DTSTAMP:${toCalendarDate(new Date())}`,
+    `DTSTART:${toCalendarDate(event.start)}`,
+    `DTEND:${toCalendarDate(event.end)}`,
+    `SUMMARY:${escapeIcs(event.title)}`,
+    `LOCATION:${escapeIcs(event.location)}`,
+    `DESCRIPTION:${escapeIcs(event.details)}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${booking.confirmationNumber || 'booking'}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function getNavigationUrl(booking: Booking) {
+  if (booking.venueLatitude && booking.venueLongitude) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${booking.venueLatitude},${booking.venueLongitude}`)}`;
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.venueLocation || booking.venueName)}`;
+}
+
+function downloadBookingPdf(booking: Booking) {
+  downloadPdfReceipt({
+    title: 'Booking Receipt',
+    subtitle: `Confirmation #${booking.confirmationNumber}`,
+    filename: `${booking.confirmationNumber || 'booking-receipt'}.pdf`,
+    lines: [
+      { label: 'Customer', value: booking.customerName || '-' },
+      { label: 'Venue', value: booking.venueName },
+      { label: 'Location', value: booking.venueLocation },
+      { label: 'Coordinates', value: booking.venueLatitude && booking.venueLongitude ? `${booking.venueLatitude}, ${booking.venueLongitude}` : 'Not provided' },
+      { label: 'Date', value: formatDate(booking.date) },
+      { label: 'Time', value: formatTimeRange(booking.startTime, booking.durationHours) },
+      { label: 'Guests', value: `${booking.guestCount}` },
+      { label: 'Status', value: booking.status.replace(/_/g, ' ') },
+      { label: 'Payment', value: booking.paymentStatus.replace(/_/g, ' ') },
+      { label: 'Total', value: formatRwf(booking.totals.total) },
+      { label: 'Paid', value: formatRwf(booking.amountPaid || 0) },
+      { label: 'Balance', value: formatRwf(booking.balanceRemaining || 0) },
+    ],
+  });
+}
+
 export default function BookingConfirmation() {
   const { venueId = '' } = useParams();
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('bookingId') || '';
   const [booking, setBooking] = useState<Booking | null>(null);
   const [message, setMessage] = useState('');
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   useEffect(() => {
     if (!bookingId) {
@@ -86,8 +222,35 @@ export default function BookingConfirmation() {
             <div className="sync-card">
               <h2>Sync Event</h2>
               <p>Add this reservation to your calendar to stay updated.</p>
-              <button type="button">Add to Google Calendar</button>
-              <button type="button">Add to Outlook</button>
+              <button type="button" onClick={() => booking && downloadBookingPdf(booking)} disabled={!booking}>Download PDF Receipt</button>
+              <a
+                className={!booking ? 'disabled' : undefined}
+                href={booking ? getNavigationUrl(booking) : undefined}
+                target="_blank"
+                rel="noreferrer"
+                aria-disabled={!booking}
+              >
+                Navigate on Map
+              </a>
+              <a
+                className={!booking ? 'disabled' : undefined}
+                href={booking ? getGoogleCalendarUrl(booking) : undefined}
+                target="_blank"
+                rel="noreferrer"
+                aria-disabled={!booking}
+              >
+                Add to Google Calendar
+              </a>
+              <a
+                className={!booking ? 'disabled' : undefined}
+                href={booking ? getOutlookCalendarUrl(booking) : undefined}
+                target="_blank"
+                rel="noreferrer"
+                aria-disabled={!booking}
+              >
+                Add to Outlook
+              </a>
+              <button type="button" onClick={() => booking && downloadIcs(booking)} disabled={!booking}>Download .ics</button>
             </div>
           </aside>
         </div>
@@ -97,6 +260,51 @@ export default function BookingConfirmation() {
           <Link to={`/venues/${venueId}/book`}>Reschedule Event</Link>
           <button type="button" onClick={handleCancel} disabled={!booking || booking.status === 'cancelled'}>Cancel Booking</button>
         </div>
+
+        {/* Payment Section */}
+        {booking && !paymentSuccess && (
+          <section className="payment-section" style={{ marginTop: '3rem', padding: '2rem', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+            <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>Complete Your Booking Payment</h2>
+            <p style={{ marginBottom: '1rem', color: '#666' }}>
+              Balance Due: <strong>{booking.balanceRemaining ? `RWF ${Math.round(booking.balanceRemaining).toLocaleString('en-US')}` : 'Paid'}</strong>
+            </p>
+
+            {booking.balanceRemaining && booking.balanceRemaining > 0 ? (
+              <PaymentComponent
+                bookingId={booking.id}
+                amount={booking.balanceRemaining}
+                currency="RWF"
+                onSuccess={() => {
+                  setPaymentSuccess(true);
+                  setMessage('✓ Payment completed successfully!');
+                  // Refresh booking data
+                  getBooking(bookingId)
+                    .then((result) => setBooking(result))
+                    .catch(() => {});
+                }}
+                onError={(error) => {
+                  setMessage(`Payment error: ${error}`);
+                }}
+              />
+            ) : (
+              <div style={{ padding: '1rem', backgroundColor: '#e8f5e9', borderRadius: '4px', color: '#2e7d32' }}>
+                <strong>✓ Payment Already Completed</strong>
+                <p>This booking has been fully paid.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {paymentSuccess && (
+          <section className="payment-success" style={{ marginTop: '3rem', padding: '2rem', backgroundColor: '#e8f5e9', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>✓</div>
+            <h2 style={{ color: '#2e7d32', marginBottom: '0.5rem' }}>Payment Complete!</h2>
+            <p style={{ color: '#555', marginBottom: '1.5rem' }}>Your booking is fully paid and confirmed.</p>
+            <Link to={`/venues/${venueId}/checkout?bookingId=${bookingId}`} style={{ padding: '0.75rem 1.5rem', backgroundColor: '#2e7d32', color: 'white', textDecoration: 'none', borderRadius: '4px', display: 'inline-block' }}>
+              View Booking Details
+            </Link>
+          </section>
+        )}
       </section>
     </main>
   );

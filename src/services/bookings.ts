@@ -32,6 +32,8 @@ export type Booking = {
   venueId: string;
   venueName: string;
   venueLocation: string;
+  venueLatitude?: string;
+  venueLongitude?: string;
   venueImage: string;
   date: string;
   startTime: string;
@@ -43,6 +45,9 @@ export type Booking = {
   paymentStatus: string;
   amountPaid?: number;
   balanceRemaining?: number;
+  refundedAmount?: number;
+  refundedAt?: string;
+  cancelledAt?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -125,15 +130,21 @@ export async function listBookings() {
 }
 
 export async function getBooking(id: string) {
-  const result = await apiRequest<BookingResponse>(`/api/bookings/${encodeURIComponent(id)}`, {
+  const result = await apiRequest<BookingResponse>(`/api/bookings/${encodeURIComponent(id)}`);
+  return result.booking;
+}
+
+export async function cancelBooking(id: string) {
+  const result = await apiRequest<BookingResponse>(`/api/bookings/${encodeURIComponent(id)}/cancel`, {
+    method: 'PATCH',
     auth: true,
   });
 
   return result.booking;
 }
 
-export async function cancelBooking(id: string) {
-  const result = await apiRequest<BookingResponse>(`/api/bookings/${encodeURIComponent(id)}/cancel`, {
+export async function refundBooking(id: string) {
+  const result = await apiRequest<BookingResponse>(`/api/bookings/${encodeURIComponent(id)}/refund`, {
     method: 'PATCH',
     auth: true,
   });

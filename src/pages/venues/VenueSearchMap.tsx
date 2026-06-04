@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import type { Venue } from '../../data/venues';
 import { getAuthUser } from '../../services/api';
 import { addFavoriteVenue, listFavoriteVenueIds, removeFavoriteVenue } from '../../services/favorites';
@@ -12,6 +12,7 @@ import './venues.css';
 const venueTypeOptions = ['Indoor/Outdoor', 'Garden Venue', 'Conference Hall', 'Corporate Hub'];
 const provinceOptions = ['Kigali City', 'Eastern Province', 'Northern Province', 'Western Province'];
 const capacityOptions = ['Any Capacity', '50 - 200 Guests', '200 - 500 Guests', '500+ Guests'];
+const allFilterTypes = new Set([...venueTypeOptions, ...provinceOptions]);
 
 function parseCapacity(value: string) {
   const numbers = value.match(/\d+/g);
@@ -65,9 +66,10 @@ export default function VenueSearchMap() {
   const [error, setError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('location') || '');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
-  const [selectedCapacity, setSelectedCapacity] = useState('Any Capacity');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(() => getParamList(searchParams, 'type', venueTypeOptions));
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>(() => getParamList(searchParams, 'province', provinceOptions));
+  const [selectedCapacity, setSelectedCapacity] = useState(() => searchParams.get('capacity') || 'Any Capacity');
+  const [mapZoom, setMapZoom] = useState(1);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -110,6 +112,9 @@ export default function VenueSearchMap() {
 
   useEffect(() => {
     setSearchTerm(searchParams.get('location') || '');
+    setSelectedTypes(getParamList(searchParams, 'type', venueTypeOptions));
+    setSelectedProvinces(getParamList(searchParams, 'province', provinceOptions));
+    setSelectedCapacity(searchParams.get('capacity') || 'Any Capacity');
   }, [searchParams]);
 
   const filteredVenues = venues.filter((venue) => {
@@ -130,11 +135,24 @@ export default function VenueSearchMap() {
     setSelectedProvinces((current) => current.includes(province) ? current.filter((item) => item !== province) : [...current, province]);
   };
 
-  const applyFilters = () => {
+  const applyFilters = (event?: FormEvent) => {
+    event?.preventDefault();
     const nextParams = new URLSearchParams(searchParams);
     if (searchTerm.trim()) nextParams.set('location', searchTerm.trim());
     else nextParams.delete('location');
+    setParamList(nextParams, 'type', selectedTypes);
+    setParamList(nextParams, 'province', selectedProvinces);
+    if (selectedCapacity !== 'Any Capacity') nextParams.set('capacity', selectedCapacity);
+    else nextParams.delete('capacity');
     setSearchParams(nextParams);
+  };
+
+  const clearMapSearch = () => {
+    setSearchTerm('');
+    setSelectedTypes([]);
+    setSelectedProvinces([]);
+    setSelectedCapacity('Any Capacity');
+    setSearchParams(new URLSearchParams());
   };
 
   const toggleFavorite = async (venueId: string) => {
@@ -169,7 +187,8 @@ export default function VenueSearchMap() {
               ))}
             </select>
           </label>
-          <button className="apply-filters" onClick={applyFilters}>Apply Filters</button>
+          <button className="apply-filters" onClick={() => applyFilters()}>Apply Filters</button>
+          <button className="apply-filters secondary" onClick={clearMapSearch}>Clear Search</button>
         </aside>
 
         <section className="results-panel">
@@ -218,28 +237,48 @@ export default function VenueSearchMap() {
         </section>
 
         <aside className="map-panel">
-          <div className="map-search">
+          <form className="map-search" onSubmit={applyFilters}>
             <span>Search</span>
             <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} aria-label="Search map" placeholder="Search venues" />
+            <button type="submit">Go</button>
+          </form>
+          <div className="active-search">
+            Active Search Area<br />
+            {[searchTerm.trim() || 'Rwanda', ...selectedProvinces, ...selectedTypes, selectedCapacity !== 'Any Capacity' ? selectedCapacity : ''].filter(Boolean).join(' / ')}
           </div>
-          <div className="active-search">Active Search Area<br />{searchTerm.trim() || 'Rwanda'}</div>
-          <div className="abstract-map">
+          <div className={`abstract-map zoom-${mapZoom}`}>
             {filteredVenues.slice(0, 3).map((venue, index) => (
               <span className={`pin pin-${['one', 'two', 'three'][index]}`} key={venue.id}>{venue.price.replace('RWF ', '')}</span>
             ))}
-            <strong>KIGALI</strong>
-            <em>Rwanda Urban Grid</em>
+            <strong>{selectedProvinces[0]?.replace(' Province', '').toUpperCase() || (searchTerm.trim() || 'Kigali').toUpperCase()}</strong>
+            <em>{filteredVenues.length ? `${filteredVenues.length} matching venues` : 'No matching venues'}</em>
           </div>
           <div className="map-controls">
-            <button>+</button>
-            <button>-</button>
-            <button>Center</button>
+            <button type="button" onClick={() => setMapZoom((current) => Math.min(current + 1, 3))}>+</button>
+            <button type="button" onClick={() => setMapZoom((current) => Math.max(current - 1, 1))}>-</button>
+            <button type="button" onClick={applyFilters}>Center</button>
           </div>
         </aside>
       </div>
       <VenueAssistant venues={filteredVenues.length > 0 ? filteredVenues : venues} />
     </main>
   );
+}
+
+function getParamList(params: URLSearchParams, key: string, allowed: string[]) {
+  const raw = params.get(key);
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => allowed.includes(item))
+    .filter((item, index, list) => list.indexOf(item) === index);
+}
+
+function setParamList(params: URLSearchParams, key: string, values: string[]) {
+  const valid = values.filter((value) => allFilterTypes.has(value));
+  if (valid.length) params.set(key, valid.join(','));
+  else params.delete(key);
 }
 
 function FilterGroup({ title, items, selected, onToggle }: { title: string; items: string[]; selected: string[]; onToggle: (item: string) => void }) {

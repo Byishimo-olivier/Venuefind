@@ -1,0 +1,31 @@
+/// <reference path="./react-is.d.ts" />
+import * as ReactIs from 'react-is/cjs/react-is.development.js'
+
+export const {
+  ContextConsumer,
+  ContextProvider,
+  Element,
+  ForwardRef,
+  Fragment,
+  Lazy,
+  Memo,
+  Portal,
+  Profiler,
+  StrictMode,
+  Suspense,
+  SuspenseList,
+  isContextConsumer,
+  isContextProvider,
+  isElement,
+  isForwardRef,
+  isFragment,
+  isLazy,
+  isMemo,
+  isPortal,
+  isProfiler,
+  isStrictMode,
+  isSuspense,
+  isSuspenseList,
+  isValidElementType,
+  typeOf,
+} = ReactIs as typeof import('react-is')

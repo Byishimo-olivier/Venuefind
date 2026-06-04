@@ -42,3 +42,20 @@ export async function listMyVenues() {
 
   return result.venues;
 }
+
+export async function updateVenue(id: string, input: Partial<Venue>) {
+  const result = await apiRequest<VenueResponse>(`/api/venues/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    auth: true,
+    body: JSON.stringify(input),
+  });
+
+  return result.venue;
+}
+
+export async function deleteVenue(id: string) {
+  await apiRequest<void>(`/api/venues/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}

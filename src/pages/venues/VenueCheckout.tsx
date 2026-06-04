@@ -1,7 +1,8 @@
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { createPaymentIntent, confirmPayment, getBooking } from '../../services/bookings';
+import { getBooking } from '../../services/bookings';
 import type { Booking } from '../../services/bookings';
+import { PaymentComponent } from '../../components/PaymentComponent';
 import './venues.css';
 
 function formatRwf(value = 0) {
@@ -12,8 +13,10 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(`${value}T00:00:00`));
 }
 
-function formatBalanceDue(value: string) {
+function formatBalanceDue(value: string | null | undefined) {
+  if (!value) return 'TBD';
   const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return 'TBD';
   date.setDate(date.getDate() - 14);
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
 }
@@ -25,9 +28,8 @@ export default function VenueCheckout() {
   const bookingId = searchParams.get('bookingId') || '';
   const [booking, setBooking] = useState<Booking | null>(null);
   const [schedule, setSchedule] = useState<'deposit' | 'full'>('deposit');
-  const [method, setMethod] = useState('card');
   const [error, setError] = useState('');
-  const [isPaying, setIsPaying] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   useEffect(() => {
     if (!bookingId) {
@@ -50,26 +52,8 @@ export default function VenueCheckout() {
   }, [bookingId]);
 
   const amountDue = schedule === 'deposit' ? booking?.totals.depositDue || 0 : booking?.totals.total || 0;
-
-  const handlePayment = async () => {
-    if (!booking) return;
-
-    setError('');
-    setIsPaying(true);
-    try {
-      const payment = await createPaymentIntent({
-        bookingId: booking.id,
-        amount: amountDue,
-        method,
-      });
-      await confirmPayment(payment.id);
-      navigate(`/venues/${venueId}/confirmed?bookingId=${encodeURIComponent(booking.id)}`);
-    } catch (paymentError) {
-      setError(paymentError instanceof Error ? paymentError.message : 'Payment could not be completed.');
-    } finally {
-      setIsPaying(false);
-    }
-  };
+  const balanceRemaining = booking ? Math.max((booking.totals.total || 0) - (schedule === 'deposit' ? booking.totals.depositDue || 0 : booking.totals.total || 0), 0) : 0;
+  const balanceDueText = schedule === 'deposit' ? `Balance due ${formatBalanceDue(booking?.date || '')}` : 'Paid in full today';
 
   return (
     <main className="checkout-page">
@@ -94,39 +78,56 @@ export default function VenueCheckout() {
             <div className="payment-options">
               <button type="button" className={schedule === 'deposit' ? 'active' : ''} onClick={() => setSchedule('deposit')}>
                 <span>Deposit</span>
-                <strong>Pay 30% Deposit</strong>
-                <em>Secure your date now, pay the remaining balance 14 days before the event.</em>
+                <strong>Pay 30% today</strong>
+                <em>Reserve your date now and pay the remaining balance later.</em>
                 <b>{formatRwf(booking?.totals.depositDue)}</b>
               </button>
               <button type="button" className={schedule === 'full' ? 'active' : ''} onClick={() => setSchedule('full')}>
                 <span>Full</span>
-                <strong>Full Payment</strong>
-                <em>Pay the entire amount upfront for a simplified accounting experience.</em>
+                <strong>Pay in full</strong>
+                <em>Settle the entire booking amount upfront.</em>
                 <b>{formatRwf(booking?.totals.total)}</b>
               </button>
             </div>
           </section>
 
-          <section className="checkout-step payment-method">
+          <section className="checkout-step checkout-payment-section">
             <h2><span>2</span>Payment Method</h2>
-            <div className="method-tabs">
-              <button type="button" className={method === 'card' ? 'active' : ''} onClick={() => setMethod('card')}>Credit Card</button>
-              <button type="button" className={method === 'mobile_money' ? 'active' : ''} onClick={() => setMethod('mobile_money')}>Mobile Money</button>
-              <button type="button" className={method === 'bank_transfer' ? 'active' : ''} onClick={() => setMethod('bank_transfer')}>Bank Transfer</button>
-            </div>
-            <label>Cardholder Name<input defaultValue="JEAN PIERRE NIYOMUGABO" /></label>
-            <label>Card Number<input defaultValue="•••• •••• •••• 4582" /></label>
-            <div className="two-fields">
-              <label>Expiry Date<input placeholder="MM / YY" /></label>
-              <label>CVV<input placeholder="•••" /></label>
-            </div>
-          </section>
 
-          <button type="button" className="secure-pay" onClick={handlePayment} disabled={!booking || isPaying}>
-            {isPaying ? 'Processing...' : `Pay ${formatRwf(amountDue)} Securely`}
-          </button>
-          {error && <p className="pci-note">{error}</p>}
-          <p className="pci-note">PCI-DSS Level 1 compliant mock transaction</p>
+            <div className="checkout-payment-summary">
+              <p>
+                {schedule === 'deposit'
+                  ? `You're paying ${formatRwf(amountDue)} today. ${balanceRemaining ? `Remaining ${formatRwf(balanceRemaining)} due by ${formatBalanceDue(booking?.date || '')}.` : ''}`
+                  : `You're paying ${formatRwf(amountDue)} now. Your booking will be fully settled.`}
+              </p>
+            </div>
+            
+            {!paymentSuccess ? (
+              <PaymentComponent
+                bookingId={booking?.id || ''}
+                amount={amountDue}
+                currency="RWF"
+                onSuccess={() => {
+                  setPaymentSuccess(true);
+                  setError('');
+                  setTimeout(() => {
+                    navigate(`/venues/${venueId}/confirmed?bookingId=${encodeURIComponent(booking?.id || '')}`);
+                  }, 2000);
+                }}
+                onError={(error) => {
+                  setError(`Payment error: ${error}`);
+                }}
+              />
+            ) : (
+              <div className="checkout-payment-status success">
+                <div className="checkout-payment-status__icon">✓</div>
+                <strong>Payment Successful!</strong>
+                <p>Redirecting to your booking confirmation...</p>
+              </div>
+            )}
+            
+            {error && <p className="checkout-payment-error">{error}</p>}
+          </section>
         </div>
 
         <aside className="receipt-card">
@@ -138,6 +139,8 @@ export default function VenueCheckout() {
           <dl>
             <div><dt>Date</dt><dd>{booking ? formatDate(booking.date) : '-'}</dd></div>
             <div><dt>Guests</dt><dd>{booking ? `${booking.guestCount} guests` : '-'}</dd></div>
+            <div><dt>Payment plan</dt><dd>{schedule === 'deposit' ? 'Deposit payment' : 'Full payment'}</dd></div>
+            <div><dt>Next due</dt><dd>{schedule === 'deposit' ? formatBalanceDue(booking?.date || '') : 'None'}</dd></div>
             <div><dt>Base Venue Hire</dt><dd>{formatRwf(booking?.totals.baseVenueFee)}</dd></div>
             <div><dt>Selected Add-ons</dt><dd>{formatRwf(booking?.totals.addonsTotal)}</dd></div>
             <div><dt>VAT</dt><dd>{formatRwf(booking?.totals.vat)}</dd></div>
@@ -149,7 +152,7 @@ export default function VenueCheckout() {
           <div className="deposit-due">
             <span>Today's Payment</span>
             <strong>{formatRwf(amountDue)}</strong>
-            <small>{booking ? `Balance due ${formatBalanceDue(booking.date)}` : 'Balance due before the event'}</small>
+            <small>{booking ? balanceDueText : 'Balance due before the event'}</small>
           </div>
         </aside>
       </section>

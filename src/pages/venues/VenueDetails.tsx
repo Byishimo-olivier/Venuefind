@@ -20,9 +20,33 @@ function isVideoUrl(url: string) {
   return /\.(mp4|webm|ogg)(\?|#|$)/i.test(url) || url.startsWith('data:video/');
 }
 
+function getVenueMedia(venue: Venue) {
+  const media = [
+    ...((venue.galleryMedia || []).filter((item) => item?.url)),
+    ...((venue.galleryImages || []).filter(Boolean).map((url) => ({
+      url,
+      type: isVideoUrl(url) ? 'video' as const : 'image' as const,
+    }))),
+  ];
+  const hasHeroInGallery = media.some((item) => item.url === venue.heroImage);
+  const allMedia = hasHeroInGallery || !venue.heroImage
+    ? media
+    : [{ url: venue.heroImage, type: venue.heroMediaType || 'image' as const, name: 'Cover' }, ...media];
+
+  return allMedia.length ? allMedia : [{ url: fallbackVenueImage, type: 'image' as const, name: 'Cover' }];
+}
+
 function getTelHref(phone: string) {
   const normalized = phone.replace(/[^\d+]/g, '');
   return normalized ? `tel:${normalized}` : '#';
+}
+
+function getNavigationUrl(venue: Venue) {
+  if (venue.latitude && venue.longitude) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${venue.latitude},${venue.longitude}`)}`;
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue.location || venue.name)}`;
 }
 
 function formatReviewDate(value: string) {
@@ -95,16 +119,7 @@ export default function VenueDetails() {
     );
   }
 
-  const gallery = venue.galleryMedia?.length
-    ? venue.galleryMedia
-    : (venue.galleryImages.length ? venue.galleryImages : [venue.heroImage, venue.heroImage]).map((url) => ({
-        url,
-        type: isVideoUrl(url) ? 'video' as const : 'image' as const,
-      }));
-  const allMedia = [
-    { url: venue.heroImage, type: venue.heroMediaType, name: 'Cover' },
-    ...gallery.filter((item) => item.url !== venue.heroImage),
-  ].filter((item) => item.url);
+  const allMedia = getVenueMedia(venue);
   const selectedMedia = allMedia[selectedMediaIndex] || allMedia[0];
 
   return (
@@ -278,14 +293,16 @@ export default function VenueDetails() {
                 <div><dt>Cleaning Fee</dt><dd>{venue.cleaningFee}</dd></div>
                 <div><dt>Decor Package</dt><dd>{venue.decorFee}</dd></div>
               </dl>
+              <a className="navigate-button" href={getNavigationUrl(venue)} target="_blank" rel="noreferrer">Navigate to Venue</a>
               <Link to={`/venues/${venue.id}/book`} className="request-button">Request Booking Details</Link>
               <button>Download Brochure (PDF)</button>
             </div>
             <div className="mini-map-card">
               <div>
                 <span>Pin</span>
-                <Link to="/venues/search">View on Map</Link>
+                <a href={getNavigationUrl(venue)} target="_blank" rel="noreferrer" aria-label={`Navigate to ${venue.name}`}>Directions</a>
               </div>
+              {venue.latitude && venue.longitude && <p>{venue.latitude}, {venue.longitude}</p>}
             </div>
             <div className="concierge-card">
               <strong>Call</strong>

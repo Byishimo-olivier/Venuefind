@@ -13,6 +13,7 @@ import VenueDetails from './pages/venues/VenueDetails';
 import VenueBooking from './pages/venues/VenueBooking';
 import VenueCheckout from './pages/venues/VenueCheckout';
 import BookingConfirmation from './pages/venues/BookingConfirmation';
+import PaymentSuccess from './pages/venues/PaymentSuccess';
 import VenueReviews from './pages/venues/VenueReviews';
 import VenueReviewForm from './pages/venues/VenueReviewForm';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
@@ -52,6 +53,7 @@ function App() {
         <Route path="/venues/:venueId/book" element={<VenueBooking />} />
         <Route path="/venues/:venueId/checkout" element={<VenueCheckout />} />
         <Route path="/venues/:venueId/confirmed" element={<BookingConfirmation />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/venues/:venueId/reviews" element={<VenueReviews />} />
         <Route path="/venues/:venueId/review/new" element={<VenueReviewForm />} />
         <Route path="/owner" element={<ProtectedRoute allowedRoles={['owner']}><OwnerDashboard /></ProtectedRoute>} />

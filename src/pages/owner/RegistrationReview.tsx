@@ -48,11 +48,12 @@ export default function RegistrationReview() {
             </div>
             <footer>
               <span>Location<br /><strong>{venue.location}</strong></span>
+              <span>Coordinates<br /><strong>{venue.latitude && venue.longitude ? `${venue.latitude}, ${venue.longitude}` : 'Not set'}</strong></span>
               <span>Category<br /><strong>{venue.category}</strong></span>
             </footer>
             {venue.galleryMedia.length > 1 && (
               <div className="media-preview-strip">
-                {venue.galleryMedia.slice(0, 6).map((item, index) => (
+                {venue.galleryMedia.map((item, index) => (
                   <span key={`${item.url.slice(0, 32)}-${index}`}>
                     {item.type === 'video' ? (
                       <video src={item.url} muted playsInline />

@@ -52,6 +52,8 @@ export default function RegistrationBusiness() {
       category: String(form.get('category') || ''),
       label: String(form.get('category') || ''),
       location: String(form.get('location') || ''),
+      latitude: String(form.get('latitude') || ''),
+      longitude: String(form.get('longitude') || ''),
       province: String(form.get('province') || ''),
       setting: String(form.get('setting') || ''),
       description: String(form.get('description') || ''),
@@ -87,6 +89,10 @@ export default function RegistrationBusiness() {
               </select>
             </label>
             <label>Exact Location<input name="location" defaultValue={draft.location} placeholder="Kiyovu, Kigali" required /></label>
+            <div className="two-fields">
+              <label>Latitude<input name="latitude" defaultValue={draft.latitude} placeholder="-1.9441" inputMode="decimal" /></label>
+              <label>Longitude<input name="longitude" defaultValue={draft.longitude} placeholder="30.0619" inputMode="decimal" /></label>
+            </div>
             <label>Province
               <select name="province" defaultValue={draft.province || 'Kigali City'} required>
                 {provinces.map((province) => <option key={province}>{province}</option>)}

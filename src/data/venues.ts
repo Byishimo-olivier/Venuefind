@@ -23,6 +23,8 @@ export type Venue = {
   contactPerson: string;
   phone: string;
   email: string;
+  latitude?: string;
+  longitude?: string;
   category: string;
   label: string;
   location: string;
@@ -145,6 +147,8 @@ export function buildVenueFromDraft(draft: VenueDraft): Venue {
     contactPerson: draft.contactPerson || 'Venue Manager',
     phone: draft.phone || '+250 788 000 000',
     email: draft.email || 'contact@example.com',
+    latitude: draft.latitude || '',
+    longitude: draft.longitude || '',
     category: draft.category || 'Verified Venue',
     label: draft.label || draft.category || 'Event Venue',
     location: draft.location || 'Kigali, Rwanda',
