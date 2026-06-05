@@ -4,6 +4,7 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { RegistrationShell } from './RegistrationShell';
 import { amenityCatalog, defaultVenueAddons, getVenueDraft, saveVenueDraft } from '../../data/venues';
 import type { VenueMedia } from '../../data/venues';
+import { getCurrentCoordinates } from '../../utils/geolocation';
 
 const provinces = ['Kigali City', 'Eastern Province', 'Western Province', 'Northern Province', 'Southern Province'];
 const categories = ['Garden Venue', 'Conference Hall', 'Heritage & Luxury Stay', 'Corporate Hub', 'Indoor/Outdoor'];
@@ -23,6 +24,10 @@ export default function RegistrationBusiness() {
       ? [{ url: draft.heroImage, type: draft.heroMediaType || 'image' as const }]
       : [];
   const [selectedMedia, setSelectedMedia] = useState<VenueMedia[]>(initialMedia);
+  const [latitude, setLatitude] = useState(draft.latitude || '');
+  const [longitude, setLongitude] = useState(draft.longitude || '');
+  const [locationStatus, setLocationStatus] = useState('');
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   const handleMediaChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -74,6 +79,22 @@ export default function RegistrationBusiness() {
     navigate('/owner/register/verification');
   };
 
+  const handleGetLocation = async () => {
+    setIsGettingLocation(true);
+    setLocationStatus('');
+
+    try {
+      const coordinates = await getCurrentCoordinates();
+      setLatitude(coordinates.latitude);
+      setLongitude(coordinates.longitude);
+      setLocationStatus('Location added.');
+    } catch (locationError) {
+      setLocationStatus(locationError instanceof Error ? locationError.message : 'Unable to get your location.');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
   return (
     <RegistrationShell step={2}>
       <form className="reg-card wide" onSubmit={handleSubmit}>
@@ -89,10 +110,17 @@ export default function RegistrationBusiness() {
               </select>
             </label>
             <label>Exact Location<input name="location" defaultValue={draft.location} placeholder="Kiyovu, Kigali" required /></label>
-            <div className="two-fields">
-              <label>Latitude<input name="latitude" defaultValue={draft.latitude} placeholder="-1.9441" inputMode="decimal" /></label>
-              <label>Longitude<input name="longitude" defaultValue={draft.longitude} placeholder="30.0619" inputMode="decimal" /></label>
+            <div className="coordinate-heading">
+              <span>Coordinates</span>
+              <button type="button" onClick={handleGetLocation} disabled={isGettingLocation}>
+                {isGettingLocation ? 'Getting location...' : 'Get location'}
+              </button>
             </div>
+            <div className="two-fields">
+              <label>Latitude<input name="latitude" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="-1.9441" inputMode="decimal" /></label>
+              <label>Longitude<input name="longitude" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="30.0619" inputMode="decimal" /></label>
+            </div>
+            {locationStatus && <p className={locationStatus === 'Location added.' ? 'location-status' : 'field-error'}>{locationStatus}</p>}
             <label>Province
               <select name="province" defaultValue={draft.province || 'Kigali City'} required>
                 {provinces.map((province) => <option key={province}>{province}</option>)}

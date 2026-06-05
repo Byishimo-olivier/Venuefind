@@ -4,6 +4,7 @@ import type { Venue } from '../../data/venues';
 import { deleteVenue, updateVenue } from '../../services/venues';
 import { ProviderShell } from './ProviderShell';
 import { exportCsv, filterVenues, useOwnerData, useOwnerSearch, venueExportRows } from './ownerData';
+import { getCurrentCoordinates } from '../../utils/geolocation';
 
 const fallbackImage =
   'https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=500';
@@ -18,6 +19,8 @@ export default function OwnerPortfolio() {
   const [actionMessage, setActionMessage] = useState('');
   const [actionError, setActionError] = useState('');
   const [busyVenueId, setBusyVenueId] = useState('');
+  const [locationStatus, setLocationStatus] = useState('');
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const activeCount = localVenues.filter((venue) => venue.status === 'approved' || venue.status === 'Approved').length;
   const pendingCount = localVenues.filter((venue) => venue.status === 'pending' || venue.status === 'Pending Approval').length;
   const searchedVenues = filterVenues(localVenues, query);
@@ -49,6 +52,7 @@ export default function OwnerPortfolio() {
     });
     setActionError('');
     setActionMessage('');
+    setLocationStatus('');
   };
 
   const updateDraft = (field: keyof Venue, value: string) => {
@@ -68,6 +72,25 @@ export default function OwnerPortfolio() {
       setActionError(saveError instanceof Error ? saveError.message : 'Unable to update venue.');
     } finally {
       setBusyVenueId('');
+    }
+  };
+
+  const handleGetLocation = async () => {
+    setIsGettingLocation(true);
+    setLocationStatus('');
+
+    try {
+      const coordinates = await getCurrentCoordinates();
+      setVenueDraft((current) => ({
+        ...current,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+      }));
+      setLocationStatus('Location added.');
+    } catch (locationError) {
+      setLocationStatus(locationError instanceof Error ? locationError.message : 'Unable to get your location.');
+    } finally {
+      setIsGettingLocation(false);
     }
   };
 
@@ -188,8 +211,15 @@ export default function OwnerPortfolio() {
                 <label>Name<input value={venueDraft.name || ''} onChange={(event) => updateDraft('name', event.target.value)} /></label>
                 <label>Category<input value={venueDraft.category || ''} onChange={(event) => updateDraft('category', event.target.value)} /></label>
                 <label>Location<input value={venueDraft.location || ''} onChange={(event) => updateDraft('location', event.target.value)} /></label>
+                <div className="coordinate-heading wide">
+                  <span>Coordinates</span>
+                  <button type="button" onClick={handleGetLocation} disabled={isGettingLocation}>
+                    {isGettingLocation ? 'Getting location...' : 'Get location'}
+                  </button>
+                </div>
                 <label>Latitude<input value={venueDraft.latitude || ''} onChange={(event) => updateDraft('latitude', event.target.value)} /></label>
                 <label>Longitude<input value={venueDraft.longitude || ''} onChange={(event) => updateDraft('longitude', event.target.value)} /></label>
+                {locationStatus && <p className={locationStatus === 'Location added.' ? 'location-status wide' : 'field-error wide'}>{locationStatus}</p>}
                 <label>Province<input value={venueDraft.province || ''} onChange={(event) => updateDraft('province', event.target.value)} /></label>
                 <label>Capacity<input value={venueDraft.capacity || ''} onChange={(event) => updateDraft('capacity', event.target.value)} /></label>
                 <label>Rate<input value={venueDraft.price || ''} onChange={(event) => updateDraft('price', event.target.value)} /></label>

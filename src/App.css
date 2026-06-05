@@ -343,6 +343,52 @@ input.is-invalid {
   grid-template-columns: 1fr 1fr;
 }
 
+.coordinate-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 0 -2px;
+}
+
+.coordinate-heading span {
+  color: #5b6470;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.coordinate-heading button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  border: 1px solid #d8dee5;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 9px 14px;
+}
+
+.coordinate-heading button:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 10px 20px rgba(16, 32, 51, 0.08);
+}
+
+.coordinate-heading button:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
+.location-status {
+  margin: 0;
+  color: #247347;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .primary-button,
 .secondary-button {
   display: inline-flex;

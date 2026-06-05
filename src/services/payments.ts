@@ -174,10 +174,11 @@ export async function initiatePesapalCardPayment(config: PaymentConfig) {
 
   const paymentResponse = await createPaymentIntent(config);
   
-  if (paymentResponse.payment.redirectUrl) {
-    redirectToPesaPal(paymentResponse.payment.redirectUrl);
+  if (!paymentResponse.payment.redirectUrl) {
+    throw new Error('PesaPal did not return a checkout link. Please try again or contact support.');
   }
 
+  redirectToPesaPal(paymentResponse.payment.redirectUrl);
   return paymentResponse.payment;
 }
 

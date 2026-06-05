@@ -201,7 +201,7 @@ export const PaymentComponent: React.FC<PaymentProps> = ({
               <input
                 id="phoneNumber"
                 type="tel"
-                placeholder="+256 7XX XXX XXX"
+                placeholder="078 XXX XXXX"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 className="payment-input"
