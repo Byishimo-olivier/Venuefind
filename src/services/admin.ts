@@ -57,6 +57,16 @@ export async function getAdminOverview() {
   return result.overview;
 }
 
+export async function extendOwnerTrial(ownerId: string, input: { extraDays?: number; expiresAt?: string }) {
+  const result = await apiRequest<{ owner: AuthUser }>(`/api/admin/trial-extension`, {
+    method: 'POST',
+    auth: true,
+    body: JSON.stringify({ ownerId, ...input }),
+  });
+
+  return result.owner;
+}
+
 export function formatRwf(value: number) {
   return new Intl.NumberFormat('en-RW', {
     maximumFractionDigits: 0,

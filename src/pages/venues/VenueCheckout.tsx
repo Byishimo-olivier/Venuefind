@@ -63,7 +63,7 @@ export default function VenueCheckout() {
           <a>Transactions</a>
           <a className="active">Secure Checkout</a>
         </nav>
-        <div>Secure Mock Payment</div>
+        <div>Secure Your Payment</div>
       </header>
 
       <section className="checkout-wrap">
@@ -78,7 +78,7 @@ export default function VenueCheckout() {
             <div className="payment-options">
               <button type="button" className={schedule === 'deposit' ? 'active' : ''} onClick={() => setSchedule('deposit')}>
                 <span>Deposit</span>
-                <strong>Pay 30% today</strong>
+                <strong>Pay {booking?.totals ? `${Math.round((booking.totals.depositRate || 0.3) * 100)}%` : 'Deposit'} today</strong>
                 <em>Reserve your date now and pay the remaining balance later.</em>
                 <b>{formatRwf(booking?.totals.depositDue)}</b>
               </button>
@@ -105,6 +105,7 @@ export default function VenueCheckout() {
             {!paymentSuccess ? (
               <PaymentComponent
                 bookingId={booking?.id || ''}
+                venueId={venueId}
                 amount={amountDue}
                 currency="RWF"
                 onSuccess={() => {

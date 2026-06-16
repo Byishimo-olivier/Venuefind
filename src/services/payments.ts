@@ -187,14 +187,12 @@ export async function initiatePesapalCardPayment(config: PaymentConfig) {
  */
 export async function initiatePayPalMobilePayment(config: PaymentConfig) {
   if (config.method !== 'phone') {
-    throw new Error('Paypack mobile payment requires method: "phone"');
+    throw new Error('Mobile payment requires method: "phone"');
   }
 
   const paymentResponse = await createPaymentIntent(config);
 
-  if (paymentResponse.payment.redirectUrl) {
-    redirectToPayPal(paymentResponse.payment.redirectUrl);
-  }
-
+  // For Paypack, no redirect needed - payment prompt goes directly to phone
+  // User will see a message on PC to check their phone
   return paymentResponse.payment;
 }

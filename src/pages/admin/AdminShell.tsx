@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { getAuthUser } from '../../services/api';
+import LanguageSelector from '../../components/LanguageSelector';
 import './admin.css';
 
 const nav = [
@@ -8,6 +9,7 @@ const nav = [
   ['Provider Vetting', '/admin/providers', 'shield'],
   ['User Management', '/admin/users', 'users'],
   ['Financial Oversight', '/admin/finance', 'ledger'],
+  ['Subscription Plans', '/admin/subscriptions', 'layers'],
   ['Platform Settings', '/admin/settings', 'sliders'],
   ['Performance', '/admin/analytics', 'chart'],
   ['Demand', '/admin/demand', 'pulse'],
@@ -67,6 +69,7 @@ export function AdminShell({ children, mode = 'admin' }: { children: ReactNode; 
           <div className="admin-topbar-actions">
             <button type="button">Alerts</button>
             <button type="button">Audit Log</button>
+            <LanguageSelector />
             <span>{initials}</span>
           </div>
         </header>

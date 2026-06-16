@@ -10,6 +10,16 @@ export type VenueMedia = {
   name?: string;
 };
 
+export type VenueDocument = {
+  id: string;
+  category: string;
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string;
+  uploadedAt: string;
+};
+
 export type VenueAddon = {
   id: string;
   name: string;
@@ -31,10 +41,13 @@ export type Venue = {
   province: string;
   setting: string;
   description: string;
+  languages?: string;
+  policy?: string;
   capacity: string;
   price: string;
   cleaningFee: string;
   decorFee: string;
+  depositRate?: number;
   heroImage: string;
   heroMediaType: 'image' | 'video';
   galleryImages: string[];
@@ -48,6 +61,7 @@ export type Venue = {
   tier: string;
   tin: string;
   rdbNumber: string;
+  verificationDocuments?: VenueDocument[];
 };
 
 const venueStorageKey = 'umurage-owner-venues';
@@ -63,7 +77,86 @@ export const defaultVenueAddons: VenueAddon[] = [
 export type VenueDraft = Partial<Venue> & {
   businessType?: 'Venue' | 'Service';
   languages?: string;
+  verificationDocuments?: VenueDocument[];
 };
+
+export const languageOptions = [
+  'Kinyarwanda',
+  'English',
+  'French',
+  'Swahili',
+  'Afrikaans',
+  'Albanian',
+  'Amharic',
+  'Arabic',
+  'Armenian',
+  'Azerbaijani',
+  'Basque',
+  'Bengali',
+  'Bosnian',
+  'Bulgarian',
+  'Burmese',
+  'Catalan',
+  'Chinese',
+  'Croatian',
+  'Czech',
+  'Danish',
+  'Dutch',
+  'Estonian',
+  'Filipino',
+  'Finnish',
+  'Georgian',
+  'German',
+  'Greek',
+  'Gujarati',
+  'Hausa',
+  'Hebrew',
+  'Hindi',
+  'Hungarian',
+  'Icelandic',
+  'Indonesian',
+  'Irish',
+  'Italian',
+  'Japanese',
+  'Kannada',
+  'Kazakh',
+  'Khmer',
+  'Korean',
+  'Kurdish',
+  'Lao',
+  'Latvian',
+  'Lithuanian',
+  'Malay',
+  'Malayalam',
+  'Marathi',
+  'Mongolian',
+  'Nepali',
+  'Norwegian',
+  'Pashto',
+  'Persian',
+  'Polish',
+  'Portuguese',
+  'Punjabi',
+  'Romanian',
+  'Russian',
+  'Serbian',
+  'Shona',
+  'Sinhala',
+  'Slovak',
+  'Slovenian',
+  'Somali',
+  'Spanish',
+  'Tamil',
+  'Telugu',
+  'Thai',
+  'Turkish',
+  'Ukrainian',
+  'Urdu',
+  'Vietnamese',
+  'Xhosa',
+  'Yoruba',
+  'Zulu',
+];
 
 const fallbackImage =
   'https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=1200';
@@ -155,23 +248,29 @@ export function buildVenueFromDraft(draft: VenueDraft): Venue {
     province: draft.province || 'Kigali City',
     setting: draft.setting || 'Urban Venue',
     description: draft.description || 'A verified venue ready to host memorable events across Rwanda.',
+    languages: draft.languages || 'Kinyarwanda, English',
+    policy: draft.policy || 'Standard booking and cancellation policies apply. Please confirm details before you arrive.',
     capacity,
     price: draft.price || 'RWF 800,000',
     cleaningFee: draft.cleaningFee || 'RWF 50,000',
     decorFee: draft.decorFee || 'RWF 200,000',
     heroImage: draft.heroImage || fallbackImage,
     heroMediaType: draft.heroMediaType || 'image',
-    galleryImages: draft.galleryImages?.length ? draft.galleryImages : allMedia.filter((item) => item.type === 'image').map((item) => item.url),
+    galleryImages: draft.galleryImages?.length && !draft.galleryMedia?.length
+      ? Array.from(new Set(draft.galleryImages))
+      : [],
     galleryMedia: allMedia.length ? allMedia : [{ url: fallbackImage, type: 'image' }],
     addons: draft.addons?.length ? draft.addons : defaultVenueAddons,
     amenities: selectedAmenities,
     tags: [draft.setting || 'Flexible Setting', capacity, draft.province || 'Rwanda'],
+    depositRate: typeof draft.depositRate === 'number' ? Math.min(Math.max(draft.depositRate, 0.05), 0.9) : 0.3,
     rating: draft.rating || 'New',
     reviews: draft.reviews || 0,
     status: draft.status || 'Pending Approval',
     tier: draft.tier || 'New Partner',
     tin: draft.tin || '',
     rdbNumber: draft.rdbNumber || '',
+    verificationDocuments: draft.verificationDocuments || [],
   };
 }
 

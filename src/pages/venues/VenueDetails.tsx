@@ -21,13 +21,22 @@ function isVideoUrl(url: string) {
 }
 
 function getVenueMedia(venue: Venue) {
-  const media = [
+  const media = [];
+  const seenUrls = new Set<string>();
+  const mediaSources = [
     ...((venue.galleryMedia || []).filter((item) => item?.url)),
     ...((venue.galleryImages || []).filter(Boolean).map((url) => ({
       url,
       type: isVideoUrl(url) ? 'video' as const : 'image' as const,
     }))),
   ];
+
+  for (const item of mediaSources) {
+    if (!item.url || seenUrls.has(item.url)) continue;
+    seenUrls.add(item.url);
+    media.push(item);
+  }
+
   const hasHeroInGallery = media.some((item) => item.url === venue.heroImage);
   const allMedia = hasHeroInGallery || !venue.heroImage
     ? media
@@ -233,6 +242,14 @@ export default function VenueDetails() {
               </div>
             </section>
 
+            <section className="venue-policy-section">
+              <h2>Guest Policy & Languages</h2>
+              <div className="policy-details">
+                <p><strong>Spoken Languages:</strong> {venue.languages || 'English'}</p>
+                <p>{venue.policy || 'No venue-specific policy has been provided yet.'}</p>
+              </div>
+            </section>
+
             <section>
               <h2 className="detail-section-title">Premium Amenities</h2>
               <div className="amenity-grid">
@@ -337,7 +354,7 @@ export default function VenueDetails() {
       </div>
       <footer className="detail-footer">
         <div>
-          <h2>Virunga Venues</h2>
+          <h2>Smart Event Venues</h2>
           <p>Curating Rwanda's most prestigious spaces for corporate milestones, cultural celebrations, and life's grandest moments.</p>
         </div>
         <div>

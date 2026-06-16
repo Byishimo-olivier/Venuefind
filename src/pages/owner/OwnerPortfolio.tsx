@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import type { Venue } from '../../data/venues';
+import type { ChangeEvent } from 'react';
+import type { Venue, VenueMedia } from '../../data/venues';
 import { deleteVenue, updateVenue } from '../../services/venues';
 import { ProviderShell } from './ProviderShell';
 import { exportCsv, filterVenues, useOwnerData, useOwnerSearch, venueExportRows } from './ownerData';
@@ -9,6 +10,17 @@ import { getCurrentCoordinates } from '../../utils/geolocation';
 const fallbackImage =
   'https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=500';
 
+function parseDepositRate(value: string) {
+  const raw = String(value || '').trim();
+  if (!raw) return 0.3;
+  const normalized = raw.replace('%', '').replace(/[^0-9.]/g, '');
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return 0.3;
+  if (parsed > 0 && parsed <= 1) return Math.min(Math.max(parsed, 0.05), 0.9);
+  if (parsed > 1 && parsed <= 100) return Math.min(Math.max(parsed / 100, 0.05), 0.9);
+  return 0.3;
+}
+
 export default function OwnerPortfolio() {
   const { venues, isLoading, error } = useOwnerData();
   const { query, setQuery } = useOwnerSearch();
@@ -16,6 +28,7 @@ export default function OwnerPortfolio() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
   const [venueDraft, setVenueDraft] = useState<Partial<Venue>>({});
+  const [selectedMedia, setSelectedMedia] = useState<VenueMedia[]>([]);
   const [actionMessage, setActionMessage] = useState('');
   const [actionError, setActionError] = useState('');
   const [busyVenueId, setBusyVenueId] = useState('');
@@ -49,7 +62,21 @@ export default function OwnerPortfolio() {
       price: venue.price,
       province: venue.province,
       setting: venue.setting,
+      languages: venue.languages || '',
+      policy: venue.policy || '',
+      depositRate: typeof venue.depositRate === 'number' ? venue.depositRate : parseDepositRate(String(venue.depositRate || '0.3')),
+      heroImage: venue.heroImage || '',
+      heroMediaType: venue.heroMediaType || 'image',
+      galleryImages: venue.galleryImages || [],
+      galleryMedia: venue.galleryMedia || [],
     });
+    setSelectedMedia(
+      venue.galleryMedia?.length
+        ? venue.galleryMedia
+        : venue.heroImage
+          ? [{ url: venue.heroImage, type: venue.heroMediaType || 'image' }]
+          : [],
+    );
     setActionError('');
     setActionMessage('');
     setLocationStatus('');
@@ -59,12 +86,51 @@ export default function OwnerPortfolio() {
     setVenueDraft((current) => ({ ...current, [field]: value }));
   };
 
+  const moveMediaItem = (index: number, direction: 'left' | 'right') => {
+    setSelectedMedia((current) => {
+      const next = [...current];
+      const target = direction === 'left' ? index - 1 : index + 1;
+      if (target < 0 || target >= next.length) return next;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const setCoverMedia = (index: number) => {
+    setSelectedMedia((current) => {
+      const next = [...current];
+      const [selected] = next.splice(index, 1);
+      next.unshift(selected);
+      return next;
+    });
+  };
+
+  const handleMediaChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const media = await Promise.all(files.map(async (file) => ({
+      url: await readFileAsDataUrl(file),
+      type: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
+      name: file.name,
+    })));
+
+    setSelectedMedia(media);
+  };
+
   const saveVenueEdit = async () => {
     if (!editingVenue) return;
     setBusyVenueId(editingVenue.id);
     setActionError('');
     try {
-      const updated = await updateVenue(editingVenue.id, venueDraft);
+      const heroMedia = selectedMedia[0];
+      const updated = await updateVenue(editingVenue.id, {
+        ...venueDraft,
+        heroImage: heroMedia?.url || venueDraft.heroImage || '',
+        heroMediaType: heroMedia?.type || venueDraft.heroMediaType || 'image',
+        galleryImages: selectedMedia.filter((item) => item.type === 'image').map((item) => item.url),
+        galleryMedia: selectedMedia,
+      });
       setLocalVenues((current) => current.map((venue) => venue.id === updated.id ? updated : venue));
       setEditingVenue(null);
       setActionMessage(`${updated.name} was updated.`);
@@ -223,8 +289,50 @@ export default function OwnerPortfolio() {
                 <label>Province<input value={venueDraft.province || ''} onChange={(event) => updateDraft('province', event.target.value)} /></label>
                 <label>Capacity<input value={venueDraft.capacity || ''} onChange={(event) => updateDraft('capacity', event.target.value)} /></label>
                 <label>Rate<input value={venueDraft.price || ''} onChange={(event) => updateDraft('price', event.target.value)} /></label>
+                <label>Deposit Rate<input value={venueDraft.depositRate?.toString() || ''} onChange={(event) => updateDraft('depositRate', parseDepositRate(event.target.value))} placeholder="0.3 or 30%" /></label>
                 <label>Setting<input value={venueDraft.setting || ''} onChange={(event) => updateDraft('setting', event.target.value)} /></label>
+                <label className="wide">Languages Spoken<input value={venueDraft.languages || ''} onChange={(event) => updateDraft('languages', event.target.value)} placeholder="Kinyarwanda, English, French" /></label>
                 <label className="wide">Description<textarea value={venueDraft.description || ''} onChange={(event) => updateDraft('description', event.target.value)} /></label>
+                <label className="wide">Venue Policy<textarea value={venueDraft.policy || ''} onChange={(event) => updateDraft('policy', event.target.value)} placeholder="Guest conduct, cancellation, noise, alcohol, damage, and setup rules." /></label>
+                <section className="venue-photo-upload wide">
+                  <div>
+                    <h2>Media Order</h2>
+                    <p>The first image or video becomes the venue cover. Move media to choose first to last.</p>
+                  </div>
+                  <label className={selectedMedia.length ? 'photo-dropzone has-preview' : 'photo-dropzone'}>
+                    {selectedMedia[0]?.type === 'video' ? (
+                      <video src={selectedMedia[0].url} muted controls playsInline />
+                    ) : selectedMedia[0] ? (
+                      <img src={selectedMedia[0].url} alt="Venue preview" />
+                    ) : (
+                      <span>
+                        <strong>Upload venue media</strong>
+                        <small>PNG, JPG, WEBP, MP4, WEBM, or OGG</small>
+                      </span>
+                    )}
+                    <input type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/ogg" multiple onChange={handleMediaChange} />
+                    <em>{selectedMedia.length ? 'Replace media set' : 'Choose media'}</em>
+                  </label>
+                  {selectedMedia.length > 0 && (
+                    <div className="media-preview-strip">
+                      {selectedMedia.map((item, index) => (
+                        <span key={`${item.url.slice(0, 32)}-${index}`}>
+                          {item.type === 'video' ? (
+                            <video src={item.url} muted playsInline />
+                          ) : (
+                            <img src={item.url} alt="" />
+                          )}
+                          <small>{index === 0 ? 'Cover' : item.type}</small>
+                          <div className="media-order-actions">
+                            <button type="button" onClick={() => setCoverMedia(index)} disabled={index === 0}>Set as cover</button>
+                            <button type="button" onClick={() => moveMediaItem(index, 'left')} disabled={index === 0}>Prev</button>
+                            <button type="button" onClick={() => moveMediaItem(index, 'right')} disabled={index === selectedMedia.length - 1}>Next</button>
+                          </div>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </div>
               <footer>
                 <button type="button" onClick={() => setEditingVenue(null)}>Cancel</button>
@@ -238,4 +346,13 @@ export default function OwnerPortfolio() {
       </section>
     </ProviderShell>
   );
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }

@@ -7,6 +7,7 @@ import { addFavoriteVenue, listFavoriteVenueIds, removeFavoriteVenue } from '../
 import { listVenues } from '../../services/venues';
 import { AiRecommendations, VenueAssistant } from './VenueAssistant';
 import { FavoriteButton } from './FavoriteButton';
+import LanguageSelector from '../../components/LanguageSelector';
 import './venues.css';
 
 const heroImage =
@@ -430,7 +431,7 @@ export function VenueHeader() {
 
   return (
     <header className="venue-header">
-      <Link to="/venues" className="venue-logo">Virunga Venues</Link>
+      <Link to="/venues" className="venue-logo">Smart Event Venues</Link>
       <nav>
         <NavLink to="/venues" end className={({ isActive }) => (isActive ? 'active' : undefined)}>Venues</NavLink>
         <Link to="/venues/search" className={activeTab === 'services' ? 'active' : ''} onClick={() => setActiveTab('services')}>Services</Link>
@@ -531,6 +532,7 @@ export function VenueHeader() {
             Login
           </Link>
         )}
+        <LanguageSelector />
       </div>
     </header>
   );
@@ -550,7 +552,7 @@ export function VenueFooter() {
     <footer className="venue-footer">
       <div className="footer-grid">
         <div>
-          <h2>Virunga Venues</h2>
+          <h2>Smart Event Venues</h2>
           <p>Connecting international standards with Rwandan heritage since 2024.</p>
         </div>
         <div>
@@ -570,12 +572,12 @@ export function VenueFooter() {
         <div>
           <h3>Contact</h3>
           <p>Kigali Heights, 4th Floor</p>
-          <p>contact@virungavenues.rw</p>
+          <p>contact@Smart Event Venuevenues.rw</p>
           <p>+250 788 000 000</p>
         </div>
       </div>
       <div className="footer-bottom">
-        <span>Copyright 2026 Smart Event Venue. A Virunga Venues Brand.</span>
+        <span>Copyright 2026 Smart Event Venue. A Smart Event Venues Brand.</span>
         <span>Privacy Policy&nbsp;&nbsp;&nbsp;&nbsp;Terms of Service</span>
       </div>
     </footer>

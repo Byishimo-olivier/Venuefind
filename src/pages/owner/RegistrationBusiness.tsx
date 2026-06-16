@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
+import type { ChangeEvent, DragEvent, FormEvent } from 'react';
 import { RegistrationShell } from './RegistrationShell';
 import { amenityCatalog, defaultVenueAddons, getVenueDraft, saveVenueDraft } from '../../data/venues';
 import type { VenueMedia } from '../../data/venues';
@@ -13,6 +13,17 @@ const settings = ['Urban Venue', 'Lakefront', 'National Park', 'Mountain View', 
 function parseAmount(value: FormDataEntryValue | null) {
   const amount = Number(String(value || '').replace(/[^0-9.]/g, ''));
   return Number.isFinite(amount) ? amount : 0;
+}
+
+function parseDepositRate(value: FormDataEntryValue | null) {
+  const raw = String(value || '').trim();
+  if (!raw) return 0.3;
+  const normalized = raw.replace('%', '').replace(/[^0-9.]/g, '');
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return 0.3;
+  if (parsed > 0 && parsed <= 1) return Math.min(Math.max(parsed, 0.05), 0.9);
+  if (parsed > 1 && parsed <= 100) return Math.min(Math.max(parsed / 100, 0.05), 0.9);
+  return 0.3;
 }
 
 export default function RegistrationBusiness() {
@@ -28,6 +39,32 @@ export default function RegistrationBusiness() {
   const [longitude, setLongitude] = useState(draft.longitude || '');
   const [locationStatus, setLocationStatus] = useState('');
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [draggedMediaIndex, setDraggedMediaIndex] = useState<number | null>(null);
+
+  const reorderMedia = (fromIndex: number, toIndex: number) => {
+    setSelectedMedia((current) => {
+      const next = [...current];
+      if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= next.length || toIndex >= next.length) return next;
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
+  const handleMediaDrop = (event: DragEvent, targetIndex: number) => {
+    event.preventDefault();
+    if (draggedMediaIndex !== null) reorderMedia(draggedMediaIndex, targetIndex);
+    setDraggedMediaIndex(null);
+  };
+
+  const setCoverMedia = (index: number) => {
+    setSelectedMedia((current) => {
+      const next = [...current];
+      const [selected] = next.splice(index, 1);
+      next.unshift(selected);
+      return next;
+    });
+  };
 
   const handleMediaChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -62,14 +99,16 @@ export default function RegistrationBusiness() {
       province: String(form.get('province') || ''),
       setting: String(form.get('setting') || ''),
       description: String(form.get('description') || ''),
+      policy: String(form.get('policy') || ''),
       capacity: String(form.get('capacity') || ''),
       price: String(form.get('price') || ''),
       cleaningFee: String(form.get('cleaningFee') || ''),
       decorFee: String(form.get('decorFee') || ''),
+      depositRate: parseDepositRate(form.get('depositRate')),
       addons,
       heroImage: heroMedia?.url || '',
       heroMediaType: heroMedia?.type || 'image',
-      galleryImages: media.filter((item) => item.type === 'image').map((item) => item.url),
+      galleryImages: [],
       galleryMedia: media,
       amenities: selectedAmenities,
       tin: String(form.get('tin') || ''),
@@ -139,6 +178,7 @@ export default function RegistrationBusiness() {
             <label>Base Price Per Day<input name="price" defaultValue={draft.price} placeholder="RWF 1,250,000" required /></label>
             <label>Cleaning Fee<input name="cleaningFee" defaultValue={draft.cleaningFee} placeholder="RWF 50,000" /></label>
             <label>Decor Package Fee<input name="decorFee" defaultValue={draft.decorFee} placeholder="RWF 200,000" /></label>
+            <label>Deposit Rate<input name="depositRate" defaultValue={draft.depositRate?.toString() || '0.3'} placeholder="0.3 or 30%" /></label>
           </section>
         </div>
 
@@ -166,6 +206,9 @@ export default function RegistrationBusiness() {
         <label>Venue Description
           <textarea name="description" defaultValue={draft.description} placeholder="Describe the venue experience, architecture, surroundings, and best event use cases." required />
         </label>
+        <label>Venue Policy
+          <textarea name="policy" defaultValue={draft.policy} placeholder="Add cancellation, guest conduct, and coordination policies for this venue." />
+        </label>
         <section className="venue-photo-upload">
           <div>
             <h2>Venue Media</h2>
@@ -186,16 +229,27 @@ export default function RegistrationBusiness() {
             <em>{selectedMedia.length ? 'Replace media set' : 'Choose media'}</em>
           </label>
           <small>{selectedMedia.length ? `${selectedMedia.length} media file${selectedMedia.length === 1 ? '' : 's'} selected` : 'No media selected yet'}</small>
-          {selectedMedia.length > 1 && (
+          {selectedMedia.length > 0 && (
             <div className="media-preview-strip">
               {selectedMedia.map((item, index) => (
-                <span key={`${item.url.slice(0, 32)}-${index}`}>
+                <span
+                  className={draggedMediaIndex === index ? 'is-dragging' : ''}
+                  draggable
+                  key={`${item.url.slice(0, 32)}-${index}`}
+                  onDragStart={() => setDraggedMediaIndex(index)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragEnd={() => setDraggedMediaIndex(null)}
+                  onDrop={(event) => handleMediaDrop(event, index)}
+                >
                   {item.type === 'video' ? (
                     <video src={item.url} muted playsInline />
                   ) : (
                     <img src={item.url} alt="" />
                   )}
                   <small>{index === 0 ? 'Cover' : item.type}</small>
+                  <div className="media-order-actions">
+                    <button type="button" onClick={() => setCoverMedia(index)} disabled={index === 0}>Set as cover</button>
+                  </div>
                 </span>
               ))}
             </div>
@@ -240,3 +294,4 @@ function readFileAsDataUrl(file: File) {
     reader.readAsDataURL(file);
   });
 }
+

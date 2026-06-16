@@ -917,3 +917,152 @@ input.is-invalid {
     grid-template-columns: 1fr;
   }
 }
+/* Global translation control */
+.language-selector {
+  align-items: center;
+  background: #101820;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  bottom: 16px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  display: flex;
+  gap: 8px;
+  left: 16px;
+  max-width: calc(100vw - 32px);
+  min-height: 42px;
+  padding: 8px 10px;
+  position: fixed;
+  z-index: 1000;
+}
+
+.language-selector span {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.language-selector select,
+.language-selector .goog-te-combo {
+  background: #ffffff;
+  border: 0;
+  border-radius: 6px;
+  color: #101820;
+  font-size: 13px;
+  max-width: 190px;
+  min-height: 30px;
+  padding: 4px 6px;
+}
+
+.language-selector .goog-logo-link,
+.language-selector .goog-te-gadget span {
+  display: none;
+}
+
+.language-selector .goog-te-gadget {
+  color: transparent;
+  font-size: 0;
+}
+
+.booking-cancel-reason {
+  color: #7a321d;
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 8px;
+  max-width: 240px;
+}
+
+.language-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -10px;
+}
+
+.language-pill-list button,
+.language-pill-list span {
+  border: 1px solid #cfd6c9;
+  border-radius: 6px;
+  background: #f4f6ef;
+  color: #184b37;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 8px 10px;
+}
+
+.language-pill-list button {
+  cursor: pointer;
+}
+
+.real-upload-box {
+  cursor: pointer;
+  position: relative;
+}
+
+.real-upload-box input {
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+  z-index: 2;
+}
+
+.real-upload-box em {
+  background: #184b37;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  margin-top: 12px;
+  padding: 9px 12px;
+  text-transform: uppercase;
+}
+
+.real-upload-box.is-dragging {
+  background: #eef5ec;
+  border-color: #184b37;
+}
+
+.real-upload-box.has-file {
+  background: #f7f3dc;
+  border-color: #b79a32;
+}
+
+.uploaded-doc-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 2;
+  justify-content: flex-end;
+  margin-top: -14px;
+}
+
+.uploaded-doc-actions button {
+  border: 1px solid #b15c47;
+  background: transparent;
+  color: #7a321d;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+@media (max-width: 720px) {
+  .language-selector {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+  }
+
+  .language-selector .goog-te-combo {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .uploaded-doc-actions {
+    grid-column: 1;
+    justify-content: flex-start;
+  }
+}

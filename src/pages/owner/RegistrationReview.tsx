@@ -1,16 +1,44 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, DragEvent } from 'react';
 import { RegistrationShell } from './RegistrationShell';
-import { buildVenueFromDraft, clearVenueDraft, getVenueDraft } from '../../data/venues';
+import { buildVenueFromDraft, clearVenueDraft, getVenueDraft, saveVenueDraft } from '../../data/venues';
+import type { VenueMedia } from '../../data/venues';
 import { createVenue } from '../../services/venues';
 
 export default function RegistrationReview() {
   const navigate = useNavigate();
   const draft = getVenueDraft();
   const venue = buildVenueFromDraft(draft);
+  const [galleryMedia, setGalleryMedia] = useState<VenueMedia[]>(draft.galleryMedia || []);
+  const [draggedMediaIndex, setDraggedMediaIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const reorderMedia = (fromIndex: number, toIndex: number) => {
+    setGalleryMedia((current) => {
+      const next = [...current];
+      if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= next.length || toIndex >= next.length) return next;
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
+  const handleMediaDrop = (event: DragEvent, targetIndex: number) => {
+    event.preventDefault();
+    if (draggedMediaIndex !== null) reorderMedia(draggedMediaIndex, targetIndex);
+    setDraggedMediaIndex(null);
+  };
+
+  const setCoverMedia = (index: number) => {
+    setGalleryMedia((current) => {
+      const next = [...current];
+      const [selected] = next.splice(index, 1);
+      next.unshift(selected);
+      return next;
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -18,7 +46,10 @@ export default function RegistrationReview() {
     setIsSubmitting(true);
 
     try {
-      const publishedVenue = await createVenue(venue);
+      const updatedDraft = { ...draft, galleryMedia };
+      saveVenueDraft(updatedDraft);
+      const updatedVenue = buildVenueFromDraft(updatedDraft);
+      const publishedVenue = await createVenue(updatedVenue);
       clearVenueDraft();
       navigate(`/venues/${publishedVenue.id}`);
     } catch (submitError) {
@@ -36,6 +67,7 @@ export default function RegistrationReview() {
           <h1>Review & Finish</h1>
           <p>Please review your application carefully. Once submitted, the public venue detail page will use these same fields.</p>
           <SummaryCard title="Basic Information" rows={[venue.contactPerson, venue.email, venue.phone, draft.languages || 'Languages not specified']} />
+          <SummaryCard title="Venue Policy" rows={[venue.policy || 'No venue policy added yet.']} />
           <article className="summary-card-reg">
             <header><h2>Venue Details</h2><Link to="/owner/register/business">Edit</Link></header>
             <div className="business-summary">
@@ -51,10 +83,20 @@ export default function RegistrationReview() {
               <span>Coordinates<br /><strong>{venue.latitude && venue.longitude ? `${venue.latitude}, ${venue.longitude}` : 'Not set'}</strong></span>
               <span>Category<br /><strong>{venue.category}</strong></span>
             </footer>
-            {venue.galleryMedia.length > 1 && (
+            {galleryMedia.length > 1 && (
               <div className="media-preview-strip">
-                {venue.galleryMedia.map((item, index) => (
-                  <span key={`${item.url.slice(0, 32)}-${index}`}>
+                {galleryMedia.map((item, index) => (
+                  <span
+                    key={`${item.url.slice(0, 32)}-${index}`}
+                    draggable
+                    onDragStart={() => setDraggedMediaIndex(index)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleMediaDrop(e, index)}
+                    onDragEnd={() => setDraggedMediaIndex(null)}
+                    onClick={() => setCoverMedia(index)}
+                    style={{ cursor: 'grab', opacity: draggedMediaIndex === index ? 0.5 : 1 }}
+                    title={index === 0 ? 'Click to set as cover' : 'Drag to reorder or click to set as cover'}
+                  >
                     {item.type === 'video' ? (
                       <video src={item.url} muted playsInline />
                     ) : (
@@ -79,7 +121,12 @@ export default function RegistrationReview() {
               ))}
             </div>
           </article>
-          <SummaryCard title="Verification Documents" rows={['RDB license ready for review', 'Insurance certificate ready for review']} />
+          <SummaryCard
+            title="Verification Documents"
+            rows={venue.verificationDocuments?.length
+              ? venue.verificationDocuments.map((document) => `${formatDocumentCategory(document.category)}: ${document.name}`)
+              : ['No verification documents uploaded yet.']}
+          />
         </div>
         <aside className="submission-card">
           <h2>Submission Summary</h2>
@@ -107,4 +154,10 @@ function SummaryCard({ title, rows }: { title: string; rows: string[] }) {
 
 function formatRwf(value: number) {
   return `RWF ${Math.round(value).toLocaleString('en-US')}`;
+}
+
+function formatDocumentCategory(value: string) {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

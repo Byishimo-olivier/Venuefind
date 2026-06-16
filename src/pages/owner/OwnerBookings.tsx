@@ -33,11 +33,19 @@ export default function OwnerBookings() {
   const cancelOwnerBooking = async (booking: Booking) => {
     const confirmed = window.confirm(`Cancel booking ${booking.confirmationNumber} for ${booking.venueName}?`);
     if (!confirmed) return;
+    const reason = window.prompt(
+      'Add the cancellation reason. For policy violations, mention which venue policy was not obeyed.',
+      booking.cancellationReason || '',
+    );
+    if (reason === null) return;
 
     setBusyBookingId(booking.id);
     setActionError('');
     try {
-      const updated = await cancelBooking(booking.id);
+      const updated = await cancelBooking(booking.id, {
+        category: 'policy_violation',
+        reason,
+      });
       replaceBooking(updated);
       setActionMessage(`Booking ${booking.confirmationNumber} was cancelled.`);
     } catch (cancelError) {
@@ -115,6 +123,7 @@ export default function OwnerBookings() {
                         Refund
                       </button>
                     </div>
+                    {booking.cancellationReason && <small className="booking-cancel-reason">Reason: {booking.cancellationReason}</small>}
                   </td>
                 </tr>
               ))}

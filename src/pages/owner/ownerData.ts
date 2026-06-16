@@ -9,6 +9,11 @@ import { listMyVenues } from '../../services/venues';
 export type OwnerData = {
   venues: Venue[];
   bookings: Booking[];
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  subscriptionStartedAt?: string;
+  subscriptionTrialEndsAt?: string;
+  subscriptionNextBillingAt?: string;
   isLoading: boolean;
   error: string;
 };
@@ -16,6 +21,19 @@ export type OwnerData = {
 type OwnerOverviewResponse = {
   venues: Venue[];
   bookings: Booking[];
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  subscriptionStartedAt?: string;
+  subscriptionTrialEndsAt?: string;
+  subscriptionNextBillingAt?: string;
+};
+
+const defaultSubscription = {
+  subscriptionPlan: 'starter',
+  subscriptionStatus: 'active',
+  subscriptionStartedAt: '',
+  subscriptionTrialEndsAt: '',
+  subscriptionNextBillingAt: '',
 };
 
 async function getOwnerOverview() {
@@ -27,6 +45,11 @@ async function getOwnerOverview() {
 export function useOwnerData(): OwnerData {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string>('starter');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('active');
+  const [subscriptionStartedAt, setSubscriptionStartedAt] = useState<string>('');
+  const [subscriptionTrialEndsAt, setSubscriptionTrialEndsAt] = useState<string>('');
+  const [subscriptionNextBillingAt, setSubscriptionNextBillingAt] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -36,12 +59,18 @@ export function useOwnerData(): OwnerData {
     getOwnerOverview()
       .catch(() => Promise.all([listMyVenues(), listBookings()]).then(([venueItems, bookingItems]) => ({
         bookings: bookingItems,
+        ...defaultSubscription,
         venues: venueItems,
       })))
-      .then(({ venues: venueItems, bookings: bookingItems }) => {
+      .then(({ venues: venueItems, bookings: bookingItems, subscriptionPlan: plan, subscriptionStatus: status, subscriptionStartedAt: started, subscriptionTrialEndsAt: trialEnds, subscriptionNextBillingAt: nextBilling }) => {
         if (!isMounted) return;
         setVenues(venueItems);
         setBookings(bookingItems);
+        setSubscriptionPlan(plan || 'starter');
+        setSubscriptionStatus(status || 'active');
+        setSubscriptionStartedAt(started || '');
+        setSubscriptionTrialEndsAt(trialEnds || '');
+        setSubscriptionNextBillingAt(nextBilling || '');
       })
       .catch((loadError) => {
         if (!isMounted) return;
@@ -56,7 +85,17 @@ export function useOwnerData(): OwnerData {
     };
   }, []);
 
-  return { venues, bookings, isLoading, error };
+  return {
+    venues,
+    bookings,
+    subscriptionPlan,
+    subscriptionStatus,
+    subscriptionStartedAt,
+    subscriptionTrialEndsAt,
+    subscriptionNextBillingAt,
+    isLoading,
+    error,
+  };
 }
 
 export function useOwnerSummary(venues: Venue[], bookings: Booking[]) {

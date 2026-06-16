@@ -11,7 +11,7 @@ const providerNav = [
   ['Bookings', '/owner/bookings', 'calendar'],
   ['Analytics', '/owner/analytics', 'chart'],
   ['Reputation', '/owner/reputation', 'star'],
-  ['Payouts', '/owner/payouts', 'wallet'],
+  ['Subscription & Payouts', '/owner/payouts', 'wallet'],
 ];
 
 function getInitials(name?: string) {

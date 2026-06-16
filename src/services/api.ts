@@ -10,6 +10,11 @@ export type AuthUser = {
   role: string;
   provider: string;
   verified: boolean;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  subscriptionStartedAt?: string;
+  subscriptionTrialEndsAt?: string;
+  subscriptionNextBillingAt?: string;
 };
 
 type RequestOptions = RequestInit & {

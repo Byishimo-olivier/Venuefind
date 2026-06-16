@@ -48,6 +48,9 @@ export type Booking = {
   refundedAmount?: number;
   refundedAt?: string;
   cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationCategory?: string;
+  cancellationReason?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -134,10 +137,11 @@ export async function getBooking(id: string) {
   return result.booking;
 }
 
-export async function cancelBooking(id: string) {
+export async function cancelBooking(id: string, input: { reason?: string; category?: string } = {}) {
   const result = await apiRequest<BookingResponse>(`/api/bookings/${encodeURIComponent(id)}/cancel`, {
     method: 'PATCH',
     auth: true,
+    body: JSON.stringify(input),
   });
 
   return result.booking;

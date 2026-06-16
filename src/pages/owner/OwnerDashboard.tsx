@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '../../components/ui/chart';
+import { TrialBanner } from '../../components/TrialBanner';
 import type { Venue } from '../../data/venues';
+import { getAuthUser } from '../../services/api';
 import { deleteVenue, updateVenue } from '../../services/venues';
 import { OwnerShell, MetricCard } from './OwnerShell';
 import { bookingExportRows, exportCsv, filterBookings, filterVenues, formatRwf, useOwnerData, useOwnerSearch, useOwnerSummary, venueExportRows } from './ownerData';
@@ -22,6 +24,8 @@ const demandChartConfig = {
 } satisfies ChartConfig;
 
 export default function OwnerDashboard() {
+  const navigate = useNavigate();
+  const user = getAuthUser();
   const { venues, bookings, isLoading, error } = useOwnerData();
   const { query, setQuery } = useOwnerSearch();
   const [localVenues, setLocalVenues] = useState<Venue[]>([]);
@@ -40,6 +44,22 @@ export default function OwnerDashboard() {
   useEffect(() => {
     setLocalVenues(venues);
   }, [venues]);
+
+  // Check if trial has expired and redirect to subscription page
+  useEffect(() => {
+    if (!user) return;
+    
+    if (user.subscriptionStatus === 'free_trial' && user.subscriptionTrialEndsAt) {
+      const trialEndDate = new Date(user.subscriptionTrialEndsAt).getTime();
+      const now = new Date().getTime();
+      
+      if (now > trialEndDate) {
+        navigate('/owner/subscription');
+      }
+    } else if (user.subscriptionStatus !== 'active' && user.subscriptionStatus !== 'free_trial') {
+      navigate('/owner/subscription');
+    }
+  }, [user, navigate]);
 
   const openEdit = (venue: Venue) => {
     setEditingVenue(venue);
@@ -119,6 +139,10 @@ export default function OwnerDashboard() {
   return (
     <OwnerShell>
       <section className="owner-content">
+        <TrialBanner
+          expiresAt={user?.subscriptionTrialEndsAt}
+          onUpgrade={() => navigate('/owner/subscription')}
+        />
         <div className="owner-heading">
           <div><p>Financial Intelligence</p><h1>Executive Dashboard</h1></div>
           <div>

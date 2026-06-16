@@ -1,11 +1,28 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { RegistrationShell } from './RegistrationShell';
-import { getVenueDraft, saveVenueDraft } from '../../data/venues';
+import { getVenueDraft, languageOptions, saveVenueDraft } from '../../data/venues';
 
 export default function RegistrationBasic() {
   const navigate = useNavigate();
   const draft = getVenueDraft();
+  const [businessType, setBusinessType] = useState<'Venue' | 'Service'>(draft.businessType || 'Venue');
+  const [selectedLanguages, setSelectedLanguages] = useState(
+    String(draft.languages || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+
+  const addLanguage = (value: string) => {
+    if (!value) return;
+    setSelectedLanguages((current) => current.includes(value) ? current : [...current, value]);
+  };
+
+  const removeLanguage = (value: string) => {
+    setSelectedLanguages((current) => current.filter((item) => item !== value));
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -13,11 +30,11 @@ export default function RegistrationBasic() {
 
     saveVenueDraft({
       name: String(form.get('name') || ''),
-      businessType: String(form.get('businessType') || 'Venue') as 'Venue' | 'Service',
+      businessType,
       contactPerson: String(form.get('contactPerson') || ''),
       phone: String(form.get('phone') || ''),
       email: String(form.get('email') || ''),
-      languages: String(form.get('languages') || ''),
+      languages: selectedLanguages.join(', '),
     });
 
     navigate('/owner/register/business');
@@ -35,8 +52,14 @@ export default function RegistrationBasic() {
 
           <span className="reg-label">Business Type</span>
           <div className="business-type">
-            <label className="active"><input type="radio" name="businessType" value="Venue" defaultChecked={draft.businessType !== 'Service'} /><span>Venue</span></label>
-            <label><input type="radio" name="businessType" value="Service" defaultChecked={draft.businessType === 'Service'} /><span>Service</span></label>
+            <label className={businessType === 'Venue' ? 'active' : ''}>
+              <input type="radio" name="businessType" value="Venue" checked={businessType === 'Venue'} onChange={() => setBusinessType('Venue')} />
+              <span>Venue</span>
+            </label>
+            <label className={businessType === 'Service' ? 'active service-active' : ''}>
+              <input type="radio" name="businessType" value="Service" checked={businessType === 'Service'} onChange={() => setBusinessType('Service')} />
+              <span>Service</span>
+            </label>
           </div>
 
           <label>Contact Person<input name="contactPerson" defaultValue={draft.contactPerson} placeholder="Full Name" required /></label>
@@ -44,7 +67,22 @@ export default function RegistrationBasic() {
             <label>Phone Number<input name="phone" defaultValue={draft.phone} placeholder="+250 788 000 000" required /></label>
             <label>Email Address<input name="email" type="email" defaultValue={draft.email} placeholder="contact@example.com" required /></label>
           </div>
-          <label>Languages Spoken<input name="languages" defaultValue={draft.languages} placeholder="Kinyarwanda, English, French" /></label>
+          <label>Languages Spoken
+            <select value="" onChange={(event) => addLanguage(event.target.value)}>
+              <option value="">Choose a language</option>
+              {languageOptions.map((language) => (
+                <option key={language} value={language}>{language}</option>
+              ))}
+            </select>
+          </label>
+          <input type="hidden" name="languages" value={selectedLanguages.join(', ')} />
+          <div className="language-pill-list">
+            {selectedLanguages.length ? selectedLanguages.map((language) => (
+              <button key={language} type="button" onClick={() => removeLanguage(language)}>
+                {language} x
+              </button>
+            )) : <span>No languages selected yet</span>}
+          </div>
 
           <button type="submit" className="reg-primary">Continue to Business Details</button>
         </form>

@@ -94,9 +94,9 @@ function downloadIcs(booking: Booking) {
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Virunga Venues//Booking Calendar//EN',
+    'PRODID:-//Smart Event Venues//Booking Calendar//EN',
     'BEGIN:VEVENT',
-    `UID:${booking.id}@virungavenues`,
+    `UID:${booking.id}@Smart Event Venuevenues`,
     `DTSTAMP:${toCalendarDate(new Date())}`,
     `DTSTART:${toCalendarDate(event.start)}`,
     `DTEND:${toCalendarDate(event.end)}`,

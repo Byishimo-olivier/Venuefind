@@ -34,6 +34,22 @@ function parseDuration(value: string) {
   return Number(value.replace(/[^0-9.]/g, '')) || 6;
 }
 
+function parseDepositRate(value: number | string | undefined) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.min(Math.max(value, 0.05), 0.9);
+  }
+
+  const raw = String(value || '').trim();
+  if (!raw) return 0.3;
+
+  const normalized = raw.replace('%', '').replace(/[^0-9.]/g, '');
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return 0.3;
+  if (parsed > 0 && parsed <= 1) return Math.min(Math.max(parsed, 0.05), 0.9);
+  if (parsed > 1 && parsed <= 100) return Math.min(Math.max(parsed / 100, 0.05), 0.9);
+  return 0.3;
+}
+
 function toDateKey(year: number, monthIndex: number, day: number) {
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
@@ -134,7 +150,8 @@ export default function VenueBooking() {
   const subtotal = baseVenueFee + cleaningFee + decorFee + addonsTotal;
   const vat = Math.round(subtotal * 0.18);
   const total = subtotal + vat;
-  const deposit = Math.round(total * 0.3);
+  const depositRate = parseDepositRate(venue?.depositRate);
+  const deposit = Math.round(total * depositRate);
 
   const handleAddonToggle = (id: string) => {
     setSelectedAddonIds((current) => (
@@ -303,7 +320,7 @@ export default function VenueBooking() {
               <span>Total Cost</span>
               <strong>{formatRwf(total)}</strong>
             </div>
-            <small>Required Deposit: 30%, {formatRwf(deposit)}</small>
+            <small>Required Deposit: {Math.round(depositRate * 100)}%, {formatRwf(deposit)}</small>
             <button type="button" className="summary-action" onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting ? 'Creating Booking...' : 'Continue to Payment'} <span>-&gt;</span>
             </button>

@@ -18,7 +18,6 @@ import VenueReviews from './pages/venues/VenueReviews';
 import VenueReviewForm from './pages/venues/VenueReviewForm';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import OwnerTransactions from './pages/owner/OwnerTransactions';
-import OwnerPayouts from './pages/owner/OwnerPayouts';
 import RegistrationBasic from './pages/owner/RegistrationBasic';
 import RegistrationBusiness from './pages/owner/RegistrationBusiness';
 import RegistrationVerification from './pages/owner/RegistrationVerification';
@@ -27,11 +26,13 @@ import OwnerReputation from './pages/owner/OwnerReputation';
 import OwnerPortfolio from './pages/owner/OwnerPortfolio';
 import OwnerBookings from './pages/owner/OwnerBookings';
 import OwnerAnalytics from './pages/owner/OwnerAnalytics';
+import SubscriptionPage from './pages/owner/SubscriptionPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminFinance from './pages/admin/AdminFinance';
 import AdminProviders from './pages/admin/AdminProviders';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminSubscriptions from './pages/admin/AdminSubscriptions';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminPerformance from './pages/admin/AdminPerformance';
 import AdminDemand from './pages/admin/AdminDemand';
@@ -57,9 +58,10 @@ function App() {
         <Route path="/venues/:venueId/reviews" element={<VenueReviews />} />
         <Route path="/venues/:venueId/review/new" element={<VenueReviewForm />} />
         <Route path="/owner" element={<ProtectedRoute allowedRoles={['owner']}><OwnerDashboard /></ProtectedRoute>} />
+        <Route path="/owner/dashboard" element={<ProtectedRoute allowedRoles={['owner']}><OwnerDashboard /></ProtectedRoute>} />
         <Route path="/owner/transactions" element={<ProtectedRoute allowedRoles={['owner']}><OwnerTransactions /></ProtectedRoute>} />
         <Route path="/owner/invoices" element={<ProtectedRoute allowedRoles={['owner']}><OwnerTransactions /></ProtectedRoute>} />
-        <Route path="/owner/payouts" element={<ProtectedRoute allowedRoles={['owner']}><OwnerPayouts /></ProtectedRoute>} />
+        <Route path="/owner/payouts" element={<ProtectedRoute allowedRoles={['owner']}><SubscriptionPage /></ProtectedRoute>} />
         <Route path="/owner/register" element={<ProtectedRoute allowedRoles={['owner']}><RegistrationBasic /></ProtectedRoute>} />
         <Route path="/owner/register/business" element={<ProtectedRoute allowedRoles={['owner']}><RegistrationBusiness /></ProtectedRoute>} />
         <Route path="/owner/register/verification" element={<ProtectedRoute allowedRoles={['owner']}><RegistrationVerification /></ProtectedRoute>} />
@@ -68,11 +70,14 @@ function App() {
         <Route path="/owner/portfolio" element={<ProtectedRoute allowedRoles={['owner']}><OwnerPortfolio /></ProtectedRoute>} />
         <Route path="/owner/bookings" element={<ProtectedRoute allowedRoles={['owner']}><OwnerBookings /></ProtectedRoute>} />
         <Route path="/owner/analytics" element={<ProtectedRoute allowedRoles={['owner']}><OwnerAnalytics /></ProtectedRoute>} />
+        <Route path="/owner/payouts" element={<ProtectedRoute allowedRoles={['owner']}><SubscriptionPage /></ProtectedRoute>} />
+        <Route path="/owner/subscription" element={<ProtectedRoute allowedRoles={['owner']}><SubscriptionPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/finance" element={<ProtectedRoute allowedRoles={['admin']}><AdminFinance /></ProtectedRoute>} />
         <Route path="/admin/providers" element={<ProtectedRoute allowedRoles={['admin']}><AdminProviders /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
+        <Route path="/admin/subscriptions" element={<ProtectedRoute allowedRoles={['admin']}><AdminSubscriptions /></ProtectedRoute>} />
         <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AdminAnalytics /></ProtectedRoute>} />
         <Route path="/admin/performance" element={<ProtectedRoute allowedRoles={['admin']}><AdminPerformance /></ProtectedRoute>} />
         <Route path="/admin/demand" element={<ProtectedRoute allowedRoles={['admin']}><AdminDemand /></ProtectedRoute>} />

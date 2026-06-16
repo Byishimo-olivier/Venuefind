@@ -10,6 +10,7 @@ interface PaymentProps {
   bookingId: string;
   amount: number;
   currency?: string;
+  venueId?: string;
   onSuccess?: (paymentId: string) => void;
   onError?: (error: string) => void;
 }
@@ -18,6 +19,7 @@ export const PaymentComponent: React.FC<PaymentProps> = ({
   bookingId,
   amount,
   currency = 'RWF',
+  venueId,
   onSuccess,
   onError,
 }) => {
@@ -73,6 +75,7 @@ export const PaymentComponent: React.FC<PaymentProps> = ({
         bookingId,
         amount,
         currency,
+        venueId,
         phoneNumber,
       });
 
@@ -225,7 +228,10 @@ export const PaymentComponent: React.FC<PaymentProps> = ({
           <div className="payment-status__icon payment-status__icon--loader" />
           <p>Processing your payment...</p>
           {paymentMethod === 'phone' && (
-            <p className="payment-status__meta">Check your phone for a mobile money approval prompt.</p>
+            <>
+              <p className="payment-status__meta">📱 Check your phone for a mobile money approval prompt.</p>
+              <p className="payment-status__meta">A payment request has been sent to <strong>{phoneNumber}</strong></p>
+            </>
           )}
           <p className="payment-status__meta">Payment ID: {paymentId}</p>
 
